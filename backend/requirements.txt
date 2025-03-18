@@ -1,0 +1,8 @@
+Django
+psycopg2-binary
+daphne
+requests
+get-docker-secret
+djangorestframework
+drf-yasg
+Twisted[tls,http2]

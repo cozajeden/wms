@@ -1,0 +1,42 @@
+x-base-backend-template: &backend-template
+  image: localhost:5000/backend:latest
+  build:
+    context: .
+    dockerfile: Dockerfile
+  env_file:
+    - env
+  volumes:
+    - .:/app
+
+services:
+  backend:
+    <<: *backend-template
+    container_name: backend
+    depends_on:
+      - backend-db
+      - backend-init
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "wms.asgi:application"]
+
+  backend-init:
+    <<: *backend-template
+    depends_on:
+      - backend-db
+    command: ["python", "manage.py", "migrate"]
+
+  backend-db:
+    image: postgres:latest
+    env_file:
+      - env
+
+  backend-nginx:
+    image: localhost:5000/backend-nginx:latest
+    container_name: backend-nginx
+    build:
+      context: .
+      dockerfile: nginx/Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+    - ./static:/static

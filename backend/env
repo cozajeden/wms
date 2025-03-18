@@ -1,0 +1,9 @@
+POSTGRES_DB=backend
+POSTGRES_USER=backend
+POSTGRES_PASSWORD=backend
+POSTGRES_ENGINE=django.db.backends.postgresql
+POSTGRES_HOST=backend-db
+POSTGRES_PORT=5432
+DJANGO_ALLOWED_HOSTS=*
+DEBUG=True
+SECRET_KEY=a3-zpyj4tcw=4825sse_sd_19o*-*b3@t4o9pg413l@f+mc!pn

@@ -12,6 +12,7 @@ services:
   backend:
     <<: *backend-template
     container_name: backend
+    restart: on-failure
     depends_on:
       - backend-db
       - backend-init
@@ -19,18 +20,25 @@ services:
 
   backend-init:
     <<: *backend-template
+    container_name: backend-init
+    restart: on-failure
     depends_on:
       - backend-db
-    command: ["python", "manage.py", "migrate"]
+    command: ["sh", "-c", "python manage.py migrate && python manage.py loaddata dev.json"]
 
   backend-db:
     image: postgres:latest
+    container_name: backend-db
+    restart: on-failure
+    ports:
+      - "5432:5432"
     env_file:
       - env
 
   backend-nginx:
     image: localhost:5000/backend-nginx:latest
     container_name: backend-nginx
+    restart: on-failure
     build:
       context: .
       dockerfile: nginx/Dockerfile

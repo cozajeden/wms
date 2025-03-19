@@ -4,5 +4,6 @@ daphne
 requests
 get-docker-secret
 djangorestframework
+djangorestframework-simplejwt
 drf-yasg
 Twisted[tls,http2]

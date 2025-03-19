@@ -9,6 +9,7 @@ class UserGroups(StrEnum):
     WAREHOUSE_MANAGER = "Warehouse Manager"
     PICKER_PACKER = "Picker/Packer"
     SUPPLIER = "Supplier"
+    OPERATOR = "Operator"
 
 
 def check_permission_function(user_groups: List[UserGroups]) -> Callable:

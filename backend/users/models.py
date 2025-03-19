@@ -16,6 +16,7 @@ class Company(models.Model):
     expiration_date = models.DateField(default=default_expiration_date)
 
     class Meta:
+        db_table = "company"
         verbose_name = "Company"
         verbose_name_plural = "Companies"
 

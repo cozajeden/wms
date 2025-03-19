@@ -27,8 +27,6 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure')
 DEBUG = os.environ.get('DEBUG') == 'True'
 
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
-CSRF_TRUSTED_ORIGINS = os.environ.get('CSRF_TRUSTED_ORIGINS', 'http://0.0.0.0').split(',')
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Application definition
 
@@ -47,6 +45,7 @@ INSTALLED_APPS = [
     'products.apps.ProductsConfig',
     'orders.apps.OrdersConfig',
     'suppliers.apps.SuppliersConfig',
+    'clients.apps.ClientsConfig',
     'api.apps.ApiConfig',
 ]
 

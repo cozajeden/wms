@@ -61,15 +61,14 @@ class TestTokensAndUsers(TestCase):
         return super().tearDown()
 
     def login(self, user: Dict[str, Any]) -> str:
-        """Login and return access and refresh tokens"""
+        """Login and return headers and refresh tokens"""
         response = self.client.post(reverse('api:login'), {
             'username': user['username'],
             'password': user['password']
         })
-        print(response.content)
         assert response.status_code == status.HTTP_200_OK
         data = response.json()
-        return data['access'], data['refresh']
+        return {'Authorization': f'Bearer {data["access"]}'}, data['refresh']
 
     def test_cant_create_user_without_auth(self):
         """Only authenticated users can create new users"""
@@ -80,28 +79,43 @@ class TestTokensAndUsers(TestCase):
 
     def test_superuser_can_create_user_for_any_company(self):
         """Superuser can create users for any company"""
-        token, _ = self.login(self.superuser)
+        headers, _ = self.login(self.superuser)
         for company_id in [self.company_unverified_obj.id, self.company_verified_obj.id]:
             user = next(self.random_user)
             user['company'] = company_id
-            response = self.client.post(reverse('api:register'), user, headers={'Authorization': f'Bearer {token}'})
+            response = self.client.post(reverse('api:register'), user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
             assert CustomUser.objects.filter(username=user['username']).exists()
 
     def test_admin_can_create_user_for_their_company(self):
         """Admin can only create users for their company"""
-        token, _ = self.login(self.superuser)
+        headers, _ = self.login(self.superuser)
         admin_user = next(self.random_user)
-        admin_user['company'] = self.company_unverified_obj.id
-        admin_user['is_active'] = True
-        response = self.client.post(reverse('api:register'), admin_user, headers={'Authorization': f'Bearer {token}'})
-        user = CustomUser.objects.filter(username=admin_user['username']).first()
-        print(user.__dict__)
+        admin_user['company'] = self.company_verified_obj.id
+        response = self.client.post(reverse('api:register'), admin_user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
-        admin_token, _ = self.login(admin_user)
+        headers, _ = self.login(admin_user)
         user = next(self.random_user)
-        response = self.client.post(reverse('api:register'), user, headers={'Authorization': f'Bearer {admin_token}'})
+        # There always is a default company with id=1
+        user['company'] = 1
+        response = self.client.post(reverse('api:register'), user, headers=headers)
+        assert response.status_code == status.HTTP_201_CREATED
+        assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
+
+    def test_admin_cant_create_user_for_unverified_company(self):
+        """Admin can't create users for unverified company"""
+        headers, _ = self.login(self.superuser)
+        admin_user = next(self.random_user)
+        admin_user['company'] = self.company_unverified_obj.id
+        response = self.client.post(reverse('api:register'), admin_user, headers=headers)
+        assert response.status_code == status.HTTP_201_CREATED
+        assert CustomUser.objects.filter(username=admin_user['username']).exists()
+        headers, _ = self.login(admin_user)
+        user = next(self.random_user)
+        # There always is a default company with id=1
+        user['company'] = 1
+        response = self.client.post(reverse('api:register'), user, headers=headers)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert not CustomUser.objects.filter(username=user['username']).exists()
         

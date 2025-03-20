@@ -1,9 +1,23 @@
 from users.serializers import RegisterUserSerializer, CustomUserSerializer, RegisterCompanySerializer
+from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework import generics, permissions, status
 from rest_framework.request import HttpRequest
 from rest_framework.response import Response
 from users.models import CustomUser, Company
 from users.auth_decorators import UserGroups
+
+
+class OnlyRegisteredCompanies(TokenObtainPairView):
+    """Only companies that are verified can login"""
+    def post(self, request: HttpRequest, *args, **kwargs) -> Response:
+        print(request.POST.dict())
+        company_is_active = CustomUser.objects.filter(
+            username=request.POST.get('username'),
+            company__is_active=True
+        ).exists()
+        if not company_is_active:
+            return Response({'error': 'Company is not verified or not known'}, status=status.HTTP_401_UNAUTHORIZED)
+        return super().post(request, *args, **kwargs)
 
 
 class RegisterUserView(generics.GenericAPIView):

@@ -66,7 +66,6 @@ class TestTokensAndUsers(TestCase):
             'username': user['username'],
             'password': user['password']
         })
-        assert response.status_code == status.HTTP_200_OK
         data = response.json()
         return {'Authorization': f'Bearer {data["access"]}'}, data['refresh']
 
@@ -103,19 +102,17 @@ class TestTokensAndUsers(TestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
 
-    def test_admin_cant_create_user_for_unverified_company(self):
-        """Admin can't create users for unverified company"""
+    def test_admin_cant_login_unverified_company(self):
+        """Admin can't login if the company is not verified"""
         headers, _ = self.login(self.superuser)
         admin_user = next(self.random_user)
         admin_user['company'] = self.company_unverified_obj.id
         response = self.client.post(reverse('api:register'), admin_user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
-        headers, _ = self.login(admin_user)
-        user = next(self.random_user)
-        # There always is a default company with id=1
-        user['company'] = 1
-        response = self.client.post(reverse('api:register'), user, headers=headers)
-        assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert not CustomUser.objects.filter(username=user['username']).exists()
-        
+        try:
+            headers, _ = self.login(admin_user)
+        except KeyError:
+            pass
+        else:
+            assert False, "Admin should not be able to login to unverified company"

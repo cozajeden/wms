@@ -110,16 +110,18 @@ class TestTokensAndUsers(TestCase):
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
 
     def test_admin_cant_login_unverified_company(self):
-        """Admin can't login if the company is not verified"""
+        """User can't login if the company is not verified"""
         headers, _ = self.login(self.superuser)
-        admin_user = next(self.random_user)
-        admin_user['company'] = self.create_comapany().id
-        response = self.client.post(self.API.register_user, admin_user, headers=headers)
-        assert response.status_code == status.HTTP_201_CREATED
-        assert CustomUser.objects.filter(username=admin_user['username']).exists()
-        try:
-            headers, _ = self.login(admin_user)
-        except KeyError:
-            pass
-        else:
-            assert False, "Admin should not be able to login to unverified company"
+        for role in CustomUser.ROLE_CHOICES:
+            user = next(self.random_user)
+            user['role'] = role[0]
+            user['company'] = self.create_comapany().id
+            response = self.client.post(self.API.register_user, user, headers=headers)
+            assert response.status_code == status.HTTP_201_CREATED
+            assert CustomUser.objects.filter(username=user['username']).exists()
+            try:
+                headers, _ = self.login(user)
+            except KeyError:
+                pass
+            else:
+                assert False, "User wit unverified company should not be able to login"

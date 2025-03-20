@@ -108,7 +108,7 @@ class TestTokensAndUsers(TestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
 
-    def test_admin_cant_login_unverified_company(self):
+    def test_user_cant_login_unverified_company(self):
         """User can't login if the company is not verified"""
         headers, _ = self.login(self.superuser)
         for role in CustomUser.ROLE_CHOICES:

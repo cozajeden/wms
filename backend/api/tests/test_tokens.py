@@ -1,11 +1,14 @@
-from django.test import TestCase
+from users.models import Company, CustomUser
+from users.auth_decorators import UserGroups
 from rest_framework.test import APIClient
 from typing import Dict, Any, Generator
 from rest_framework import status
-from users.models import Company, CustomUser
-from users.auth_decorators import UserGroups
+from django.test import TestCase
 from django.urls import reverse
-import faker
+from faker import Faker
+
+faker = Faker()
+
 
 def user_generator() -> Generator[Dict[str, Any], None, None]:
     """
@@ -14,9 +17,9 @@ def user_generator() -> Generator[Dict[str, Any], None, None]:
     """
     while True:
         yield {
-            'username': faker.Faker().user_name(),
-            'password': faker.Faker().password(),
-            'email': faker.Faker().email(),
+            'username': faker.user_name(),
+            'password': faker.password(),
+            'email': faker.email(),
             'role': UserGroups.ADMIN.value
         }
 
@@ -24,65 +27,69 @@ def company_generator() -> Generator[Dict[str, Any], None, None]:
     """Generate random company data, including name, domain and email."""
     while True:
         yield {
-            'name': faker.Faker().company(),
-            'domain': faker.Faker().domain_name(),
-            'email': faker.Faker().email()
+            'domain': faker.domain_name(),
+            'name': faker.company(),
+            'email': faker.email()
         }
 
 
 class TestTokensAndUsers(TestCase):
+    class API:
+        login = reverse('api:login')
+        register_user = reverse('api:register_user')
+        refresh_token = reverse('api:refresh_token')
+        register_company = reverse('api:register_company')
+
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        cls.client = APIClient()
         cls.random_user = user_generator()
         cls.random_company = company_generator()
-        cls.client = APIClient()
         cls.superuser = next(cls.random_user)
         # There always is a default company with id=1
-        cls.superuser['company_id'] = 1
         cls.superuser['is_superuser'] = True
         cls.superuser['is_staff'] = True
+        cls.superuser['company_id'] = 1
         cls.superuser_obj = CustomUser.objects.create_superuser(**cls.superuser)
-        cls.company_unverified = next(cls.random_company)
-        cls.company_verified = next(cls.random_company)
-        cls.company_verified['is_active'] = True
-        cls.company_unverified_obj = Company.objects.create(**cls.company_unverified)
-        cls.company_verified_obj = Company.objects.create(**cls.company_verified)
-        cls.company_unverified_obj.save()
-        cls.company_verified_obj.save()
-
-    @classmethod
-    def tearDownClass(cls):
-        Company.objects.exclude(id=1).delete()
-        super().tearDownClass()
 
     def tearDown(self):
         CustomUser.objects.all().delete()
+        Company.objects.exclude(id=1).delete()
         return super().tearDown()
 
     def login(self, user: Dict[str, Any]) -> str:
         """Login and return headers and refresh tokens"""
-        response = self.client.post(reverse('api:login'), {
+        response = self.client.post(self.API.login, {
             'username': user['username'],
             'password': user['password']
         })
         data = response.json()
         return {'Authorization': f'Bearer {data["access"]}'}, data['refresh']
 
+    def create_comapany(self, verified: bool = False) -> Company:
+        """Create a new company"""
+        response = self.client.post(self.API.register_company, next(self.random_company))
+        assert response.status_code == status.HTTP_201_CREATED
+        company = Company.objects.get(name=response.json()['company']['name'])
+        company.is_active = verified
+        company.save()
+        return company
+
     def test_cant_create_user_without_auth(self):
         """Only authenticated users can create new users"""
         user = next(self.random_user)
-        response = self.client.post(reverse('api:register'), user)
+        response = self.client.post(self.API.register_user, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert not CustomUser.objects.filter(**user).exists()
 
     def test_superuser_can_create_user_for_any_company(self):
         """Superuser can create users for any company"""
         headers, _ = self.login(self.superuser)
-        for company_id in [self.company_unverified_obj.id, self.company_verified_obj.id]:
+        for company in [self.create_comapany(), self.create_comapany(verified=True)]:
             user = next(self.random_user)
-            user['company'] = company_id
-            response = self.client.post(reverse('api:register'), user, headers=headers)
+            user['company'] = company.id
+            response = self.client.post(self.API.register_user, user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
             assert CustomUser.objects.filter(username=user['username']).exists()
 
@@ -90,15 +97,15 @@ class TestTokensAndUsers(TestCase):
         """Admin can only create users for their company"""
         headers, _ = self.login(self.superuser)
         admin_user = next(self.random_user)
-        admin_user['company'] = self.company_verified_obj.id
-        response = self.client.post(reverse('api:register'), admin_user, headers=headers)
+        admin_user['company'] = self.create_comapany(True).id
+        response = self.client.post(self.API.register_user, admin_user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
         headers, _ = self.login(admin_user)
         user = next(self.random_user)
         # There always is a default company with id=1
         user['company'] = 1
-        response = self.client.post(reverse('api:register'), user, headers=headers)
+        response = self.client.post(self.API.register_user, user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
 
@@ -106,8 +113,8 @@ class TestTokensAndUsers(TestCase):
         """Admin can't login if the company is not verified"""
         headers, _ = self.login(self.superuser)
         admin_user = next(self.random_user)
-        admin_user['company'] = self.company_unverified_obj.id
-        response = self.client.post(reverse('api:register'), admin_user, headers=headers)
+        admin_user['company'] = self.create_comapany().id
+        response = self.client.post(self.API.register_user, admin_user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
         try:

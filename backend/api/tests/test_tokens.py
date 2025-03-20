@@ -46,11 +46,11 @@ class TestTokensAndUsers(TestCase):
         cls.client = APIClient()
         cls.random_user = user_generator()
         cls.random_company = company_generator()
+        cls.default_company = Company.objects.get(id=1)
         cls.superuser = next(cls.random_user)
-        # There always is a default company with id=1
         cls.superuser['is_superuser'] = True
         cls.superuser['is_staff'] = True
-        cls.superuser['company_id'] = 1
+        cls.superuser['company_id'] = cls.default_company.id
         cls.superuser_obj = CustomUser.objects.create_superuser(**cls.superuser)
 
     def tearDown(self):
@@ -103,8 +103,7 @@ class TestTokensAndUsers(TestCase):
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
         headers, _ = self.login(admin_user)
         user = next(self.random_user)
-        # There always is a default company with id=1
-        user['company'] = 1
+        user['company'] = self.default_company.id
         response = self.client.post(self.API.register_user, user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
@@ -124,4 +123,4 @@ class TestTokensAndUsers(TestCase):
             except KeyError:
                 pass
             else:
-                assert False, "User wit unverified company should not be able to login"
+                assert False, "User with unverified company should not be able to login"

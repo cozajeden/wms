@@ -13,7 +13,7 @@ def create_user_groups(apps, schema_editor):
     Group = apps.get_model("auth", "Group")
     Group.objects.bulk_create([Group(name=name) for name in UserGroups])
     Company = apps.get_model("users", "Company")
-    Company.objects.create(name="Default Company", domain="default.com", is_active=True)
+    Company.objects.create(name="Default Company", domain="default.com", email="rys.napierala@gmail.com", is_active=True)
 
 
 class Migration(migrations.Migration):
@@ -31,6 +31,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=255)),
                 ('domain', models.CharField(max_length=255)),
+                ('email', models.EmailField()),
                 ('is_active', models.BooleanField(default=False)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('expiration_date', models.DateField(default=users.models.default_expiration_date)),

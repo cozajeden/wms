@@ -1,5 +1,5 @@
+from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.auth.hashers import make_password
-from django.contrib.auth.models import AbstractUser
 from .auth_decorators import UserGroups
 from django.utils import timezone
 from django.db import models
@@ -26,7 +26,14 @@ class Company(models.Model):
         return self.name
 
 
+class CustomUserManager(UserManager):
+    def create(self, **kwargs):
+        kwargs['password'] = make_password(kwargs['password'])
+        return super().create(**kwargs)
+
+
 class CustomUser(AbstractUser):
+    objects = CustomUserManager()
     company = models.ForeignKey(Company, on_delete=models.CASCADE)
     ROLE_CHOICES = [(str(group), str(group)) for group in UserGroups]
     role = models.CharField(max_length=255, choices=ROLE_CHOICES)

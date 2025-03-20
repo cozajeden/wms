@@ -20,7 +20,7 @@ def user_generator() -> Generator[Dict[str, Any], None, None]:
             'username': faker.user_name(),
             'password': faker.password(),
             'email': faker.email(),
-            'role': UserGroups.ADMIN.value
+            'role': UserGroups.ADMIN.value,
         }
 
 def company_generator() -> Generator[Dict[str, Any], None, None]:
@@ -59,13 +59,13 @@ class TestTokensAndUsers(TestCase):
         return super().tearDown()
 
     def login(self, user: Dict[str, Any]) -> str:
-        """Login and return headers and refresh tokens"""
+        """Login and return headers and refresh token dict"""
         response = self.client.post(self.API.login, {
             'username': user['username'],
             'password': user['password']
         })
         data = response.json()
-        return {'Authorization': f'Bearer {data["access"]}'}, data['refresh']
+        return {'Authorization': f'Bearer {data["access"]}'}, {'refresh': data['refresh']}
 
     def create_comapany(self, verified: bool = False) -> Company:
         """Create a new company"""
@@ -124,3 +124,17 @@ class TestTokensAndUsers(TestCase):
                 pass
             else:
                 assert False, "User with unverified company should not be able to login"
+
+    def test_can_logged_user_refresh_token(self):
+        """Logged user can refresh token"""
+        _, refresh_token = self.login(self.superuser)
+        response = self.client.post(self.API.refresh_token, refresh_token)
+        assert response.status_code == status.HTTP_200_OK
+        for role, _ in CustomUser.ROLE_CHOICES:
+            user = next(self.random_user)
+            user['role'] = role
+            user['company'] = self.default_company
+            CustomUser.objects.create(**user)
+            _, refresh_token = self.login(user)
+            response = self.client.post(self.API.refresh_token, refresh_token)
+            assert response.status_code == status.HTTP_200_OK

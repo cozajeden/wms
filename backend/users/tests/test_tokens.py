@@ -1,5 +1,5 @@
-from users.models import Company, CustomUser
-from users.auth_decorators import UserGroups
+from ..models import Company, CustomUser
+from ..auth_decorators import UserGroups
 from rest_framework.test import APIClient
 from typing import Dict, Any, Generator
 from rest_framework import status
@@ -35,10 +35,10 @@ def company_generator() -> Generator[Dict[str, Any], None, None]:
 
 class TestTokensAndUsers(TestCase):
     class API:
-        login = reverse('api:login')
-        register_user = reverse('api:register_user')
-        refresh_token = reverse('api:refresh_token')
-        register_company = reverse('api:register_company')
+        login = reverse('users:login')
+        register_user = reverse('users:register_user')
+        refresh_token = reverse('users:refresh_token')
+        register_company = reverse('users:register_company')
 
     @classmethod
     def setUpClass(cls):

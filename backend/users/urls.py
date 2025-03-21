@@ -2,7 +2,7 @@ from rest_framework_simplejwt.views import TokenRefreshView
 from . import views
 from django.urls import path
 
-app_name = 'api'
+app_name = 'users'
 
 urlpatterns = [
     path('register/', views.RegisterUserView.as_view(), name='register_user'),

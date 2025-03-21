@@ -2,9 +2,11 @@ x-base-backend-template: &backend-template
   image: localhost:5000/backend:latest
   build:
     context: .
-    dockerfile: Dockerfile
+    dockerfile: Dockerfile.dev
+  restart: on-failure
   env_file:
     - env
+    - .env.dev
   volumes:
     - .:/app
 
@@ -12,7 +14,6 @@ services:
   backend:
     <<: *backend-template
     container_name: backend
-    restart: on-failure
     depends_on:
       - backend-db
       - backend-init
@@ -21,7 +22,6 @@ services:
   backend-init:
     <<: *backend-template
     container_name: backend-init
-    restart: on-failure
     depends_on:
       - backend-db
     command: ["sh", "-c", "python manage.py migrate && python manage.py loaddata dev.json"]

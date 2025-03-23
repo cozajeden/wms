@@ -16,9 +16,9 @@ def default_expiration_date():
 
 
 class Company(models.Model):
-    name = models.CharField(max_length=255)
-    domain = models.CharField(max_length=255)
-    email = models.EmailField()
+    name = models.CharField(max_length=255, help_text="Company Name", verbose_name="Company Name")
+    domain = models.URLField(max_length=255, help_text="Company URL", verbose_name="Company URL")
+    email = models.EmailField(help_text="Contact Email", verbose_name="Contact Email")
     is_active = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     expiration_date = models.DateField(default=default_expiration_date)
@@ -44,4 +44,3 @@ class CustomUser(AbstractUser):
     ROLE_CHOICES = [(str(group), str(group)) for group in UserGroups]
     role = models.CharField(max_length=255, choices=ROLE_CHOICES)
     REQUIRED_FIELDS = ['email', 'role', 'company_id']
-

@@ -5,8 +5,8 @@ from django.urls import path
 app_name = 'users'
 
 urlpatterns = [
-    path('register/', views.RegisterUserView.as_view(), name='register_user'),
-    path('register/company/', views.RegisterCompanyView.as_view(), name='register_company'),
-    path('login/', views.OnlyRegisteredCompanies.as_view(), name='login'),
+    path('register/', views.CreateUserView.as_view(), name='register_user'),
+    path('register/company/', views.CreateCompanyView.as_view(), name='register_company'),
+    path('login/', views.OnlyVerifiedCompaniesTokenObtainPairView.as_view(), name='login'),
     path('token/refresh/', TokenRefreshView.as_view(), name='refresh_token'),
 ]

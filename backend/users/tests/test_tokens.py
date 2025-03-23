@@ -27,7 +27,7 @@ def company_generator() -> Generator[Dict[str, Any], None, None]:
     """Generate random company data, including name, domain and email."""
     while True:
         yield {
-            'domain': faker.domain_name(),
+            'domain': faker.url(),
             'name': faker.company(),
             'email': faker.email()
         }
@@ -71,9 +71,11 @@ class TestTokensAndUsers(TestCase):
 
     def create_comapany(self, verified: bool = False) -> Company:
         """Create a new company"""
-        response = self.client.post(API.register_company, next(self.random_company))
+        company = next(self.random_company)
+        response = self.client.post(API.register_company, company)
+        print(response.json())
         assert response.status_code == status.HTTP_201_CREATED
-        company = Company.objects.get(name=response.json()['company']['name'])
+        company = Company.objects.get(name=company['name'])
         company.is_active = verified
         company.save()
         return company

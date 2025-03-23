@@ -58,7 +58,6 @@ class DeleteUserView(generics.DestroyAPIView):
     """Delete a user"""
     queryset = CustomUser.objects.all()
     serializer_class = serializers.CustomUserSerializer
-    permission_classes = [permissions.IsAuthenticated]
 
     @swagger_auto_schema(responses={204: serializers.info_response, 401: serializers.error_response, 403: serializers.error_response},)
     def delete(self, request: HttpRequest, *args, **kwargs) -> Response:
@@ -70,25 +69,6 @@ class DeleteUserView(generics.DestroyAPIView):
         return Response({'message': 'User deleted'}, status=status.HTTP_204_NO_CONTENT)
 
 
-class CreateCompanyView(generics.GenericAPIView):
+class CreateCompanyView(generics.CreateAPIView):
     serializer_class = serializers.RegisterCompanySerializer
     permission_classes = [permissions.AllowAny]
-
-    @swagger_auto_schema(responses={201: serializers.info_response, 400: serializers.error_response},)
-    def post(self, request: HttpRequest) -> Response:
-        """
-        Create a new company.<br>
-        It will be inactive until verified.<br>
-        This endpoint is public.
-        """
-        serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
-            return Response({
-                'message': 'Added company successfully. ' +
-                'After verifying, you will receive an email with login details. ' +
-                'This usually takes few hours.',
-            }, status=status.HTTP_201_CREATED)
-        except Exception as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)

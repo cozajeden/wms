@@ -6,7 +6,6 @@ from rest_framework import status
 from django.test import TestCase
 from django.urls import reverse
 from ..models import UserGroups
-from functools import partial
 from enum import StrEnum
 from faker import Faker
 
@@ -46,6 +45,7 @@ class API(StrEnum):
     def delete_user(user_pk: int) -> str:
         return reverse('users:delete_user', args=[user_pk])
 
+
 class TestTokensAndUsers(TestCase):
 
     @classmethod
@@ -78,7 +78,7 @@ class TestTokensAndUsers(TestCase):
         return {'Authorization': f'Bearer {data["access"]}'}, {'refresh': data['refresh']}
 
     def create_comapany(self, verified: bool = False) -> Company:
-        """Create a new company"""
+        """Login is not required to create a company"""
         company = next(self.random_company)
         response = self.client.post(API.register_company, company)
         assert response.status_code == status.HTTP_201_CREATED
@@ -93,6 +93,15 @@ class TestTokensAndUsers(TestCase):
         response = self.client.post(API.register_user, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert not CustomUser.objects.filter(**user).exists()
+
+    def test_anonymous_user_cant_use_other_than_create_company(self):
+        """Anonymous user can only create a company or login"""
+        user = next(self.random_user)
+        response = self.client.post(API.register_user, user)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
+        assert not CustomUser.objects.filter(**user).exists()
+        response = self.client.post(API.refresh_token, {'refresh': 'token'})
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_superuser_can_create_user_for_any_company(self):
         """Superuser can create users for any company"""

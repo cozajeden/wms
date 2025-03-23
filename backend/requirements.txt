@@ -1,15 +1,8 @@
-Django
+Django==5.1
 psycopg2-binary
-daphne
-requests
+gunicorn
 get-docker-secret
 djangorestframework
 djangorestframework-simplejwt[crypto]
 drf-yasg
-faker
-pytest
-pytest-django
-pytest-faker
-pytest-asyncio
-pytest-cov
 Twisted[tls,http2]

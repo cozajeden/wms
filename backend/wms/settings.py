@@ -45,7 +45,6 @@ INSTALLED_APPS = [
     'orders.apps.OrdersConfig',
     'suppliers.apps.SuppliersConfig',
     'clients.apps.ClientsConfig',
-    'api.apps.ApiConfig',
 ]
 
 MIDDLEWARE = [
@@ -82,7 +81,7 @@ TEMPLATES = [
     },
 ]
 
-ASGI_APPLICATION = 'wms.asgi.application'
+WSGI_APPLICATION = 'wms.wsgi.application'
 
 
 # Database

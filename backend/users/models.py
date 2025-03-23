@@ -1,8 +1,14 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.auth.hashers import make_password
-from .auth_decorators import UserGroups
 from django.utils import timezone
 from django.db import models
+from enum import StrEnum
+
+
+class UserGroups(StrEnum):
+    ADMIN = "Admin"
+    WAREHOUSE_MANAGER = "Warehouse Manager"
+    PICKER_PACKER = "Picker/Packer"
 
 
 def default_expiration_date():

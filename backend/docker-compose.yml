@@ -3,6 +3,7 @@ x-base-backend-template: &backend-template
   build:
     context: .
     dockerfile: Dockerfile.dev
+    target: backend-dev
   restart: on-failure
   env_file:
     - env
@@ -17,7 +18,7 @@ services:
     depends_on:
       - backend-db
       - backend-init
-    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "wms.asgi:application"]
+    command: ["gunicorn", "--bind", "0.0.0.0:8000", "wms.wsgi:application", "--workers", "2"]
 
   backend-init:
     <<: *backend-template

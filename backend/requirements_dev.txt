@@ -1,0 +1,6 @@
+faker
+pytest
+pytest-django
+pytest-faker
+pytest-asyncio
+pytest-cov

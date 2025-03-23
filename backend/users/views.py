@@ -1,10 +1,9 @@
 from .serializers import RegisterUserSerializer, CustomUserSerializer, RegisterCompanySerializer
-from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
+from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework import generics, permissions, status
+from users.models import CustomUser, UserGroups
 from rest_framework.request import HttpRequest
 from rest_framework.response import Response
-from users.models import CustomUser, Company
-from .auth_decorators import UserGroups
 
 
 class OnlyRegisteredCompanies(TokenObtainPairView):

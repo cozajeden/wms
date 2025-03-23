@@ -6,6 +6,8 @@ from rest_framework import status
 from django.test import TestCase
 from django.urls import reverse
 from ..models import UserGroups
+from functools import partial
+from enum import StrEnum
 from faker import Faker
 
 faker = Faker()
@@ -34,12 +36,15 @@ def company_generator() -> Generator[Dict[str, Any], None, None]:
         }
 
 
-class API:
+class API(StrEnum):
     login = reverse('users:login')
     register_user = reverse('users:register_user')
     refresh_token = reverse('users:refresh_token')
     register_company = reverse('users:register_company')
 
+    @staticmethod
+    def delete_user(user_pk: int) -> str:
+        return reverse('users:delete_user', args=[user_pk])
 
 class TestTokensAndUsers(TestCase):
 
@@ -49,15 +54,17 @@ class TestTokensAndUsers(TestCase):
         cls.client = APIClient()
         cls.random_user = user_generator()
         cls.random_company = company_generator()
-        cls.default_company = Company.objects.get(id=1)
+        cls.default_company = next(cls.random_company)
+        cls.default_company['is_active'] = True
+        cls.default_company_obj = Company.objects.create(**cls.default_company)
         cls.superuser = next(cls.random_user)
         cls.superuser['is_superuser'] = True
         cls.superuser['is_staff'] = True
-        cls.superuser['company_id'] = cls.default_company.id
+        cls.superuser['company_id'] = cls.default_company_obj.id
         cls.superuser_obj = CustomUser.objects.create_superuser(**cls.superuser)
 
     def tearDown(self):
-        CustomUser.objects.all().delete()
+        CustomUser.objects.exclude(username=self.superuser_obj.username).all().delete()
         Company.objects.exclude(id=1).delete()
         return super().tearDown()
 
@@ -107,7 +114,7 @@ class TestTokensAndUsers(TestCase):
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
         headers, _ = self.login(admin_user)
         user = next(self.random_user)
-        user['company'] = self.default_company.id
+        user['company'] = self.default_company_obj.id
         response = self.client.post(API.register_user, user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
@@ -122,12 +129,8 @@ class TestTokensAndUsers(TestCase):
             response = self.client.post(API.register_user, user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
             assert CustomUser.objects.filter(username=user['username']).exists()
-            try:
-                headers, _ = self.login(user)
-            except KeyError:
-                pass
-            else:
-                assert False, "User with unverified company should not be able to login"
+            response = self.client.post(API.login, user)
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_can_logged_user_refresh_token(self):
         """Logged user can refresh token"""
@@ -137,7 +140,7 @@ class TestTokensAndUsers(TestCase):
         for role, _ in CustomUser.ROLE_CHOICES:
             user = next(self.random_user)
             user['role'] = role
-            user['company'] = self.default_company
+            user['company'] = self.default_company_obj
             CustomUser.objects.create(**user)
             _, refresh_token = self.login(user)
             response = self.client.post(API.refresh_token, refresh_token)
@@ -159,3 +162,38 @@ class TestTokensAndUsers(TestCase):
             user['company'].save()
             response = self.client.post(API.login, user, headers=headers)
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_superuser_and_admin_can_delete_user(self):
+            """
+            Superuser and Admin can delete user.
+            Other roles can't delete user.
+            """
+            headers, _ = self.login(self.superuser)
+            login_user = next(self.random_user)
+            login_user['company'] = self.default_company_obj
+            login_user_obj = CustomUser.objects.create(**login_user)
+            # Superuser can delete any user
+            response = self.client.delete(API.delete_user(login_user_obj.id), headers=headers)
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not CustomUser.objects.filter(username=login_user['username']).exists()
+            login_user_obj = CustomUser.objects.create(**login_user)
+            headers, _ = self.login(login_user)
+            user = next(self.random_user)
+            user['company'] = self.default_company_obj
+            user_obj = CustomUser.objects.create(**user)
+            # Admin can delete only users from their company
+            response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not CustomUser.objects.filter(username=user['username']).exists()
+            for role, _ in CustomUser.ROLE_CHOICES:
+                if role == UserGroups.ADMIN.value: continue
+                login_user_obj.role = role
+                login_user_obj.save()
+                headers, _ = self.login(login_user)
+                user = next(self.random_user)
+                user['company'] = self.default_company_obj
+                user_obj = CustomUser.objects.create(**user)
+                # Other roles can't delete user
+                response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
+                assert response.status_code == status.HTTP_403_FORBIDDEN
+                assert CustomUser.objects.filter(username=user['username']).exists()

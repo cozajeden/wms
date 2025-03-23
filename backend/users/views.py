@@ -17,7 +17,7 @@ class OnlyVerifiedCompaniesTokenObtainPairView(TokenObtainPairView):
             username=request.POST.get('username'),
         ).exists()
         if not company_is_active:
-            return Response({'error': 'Company is not verified or not known'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Company is not verified or expired'}, status=status.HTTP_401_UNAUTHORIZED)
         return super().post(request, *args, **kwargs)
 
 
@@ -52,6 +52,22 @@ class CreateUserView(generics.GenericAPIView):
             return Response({'message': 'User created'}, status=status.HTTP_201_CREATED)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class DeleteUserView(generics.DestroyAPIView):
+    """Delete a user"""
+    queryset = CustomUser.objects.all()
+    serializer_class = serializers.CustomUserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    @swagger_auto_schema(responses={204: serializers.info_response, 401: serializers.error_response, 403: serializers.error_response},)
+    def delete(self, request: HttpRequest, *args, **kwargs) -> Response:
+        """Delete a user"""
+        user = self.get_object()
+        if not request.user.is_superuser and not (user.company_id == request.user.company_id and request.user.role == UserGroups.ADMIN.value):
+            return Response({'error': 'You are not allowed to delete this user'}, status=status.HTTP_403_FORBIDDEN)
+        user.delete()
+        return Response({'message': 'User deleted'}, status=status.HTTP_204_NO_CONTENT)
 
 
 class CreateCompanyView(generics.GenericAPIView):

@@ -1,5 +1,6 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.contrib.auth.hashers import make_password
+from django.db.models.functions import Now
 from django.utils import timezone
 from django.db import models
 from enum import StrEnum
@@ -12,7 +13,7 @@ class UserGroups(StrEnum):
 
 
 def default_expiration_date():
-    return timezone.now() + timezone.timedelta(days=7)
+    return Now() + timezone.timedelta(days=7)
 
 
 class Company(models.Model):

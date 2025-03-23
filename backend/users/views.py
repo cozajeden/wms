@@ -1,4 +1,5 @@
 from rest_framework_simplejwt.views import TokenObtainPairView
+from django.db.models import Q, functions as db_functions
 from rest_framework import generics, permissions, status
 from drf_yasg.utils import swagger_auto_schema
 from users.models import CustomUser, UserGroups
@@ -8,13 +9,12 @@ from . import serializers
 
 
 class OnlyVerifiedCompaniesTokenObtainPairView(TokenObtainPairView):
-    """Only companies that are verified can login"""
     @swagger_auto_schema(responses={401: serializers.error_response, 200: serializers.login_response},)
     def post(self, request: HttpRequest, *args, **kwargs) -> Response:
-        print(request.POST.dict())
+        """Only companies that are verified and not expired can login"""
         company_is_active = CustomUser.objects.filter(
+            (Q(company__expiration_date__gte=db_functions.Now()) & Q(company__is_active=True)) | Q(is_superuser=True),
             username=request.POST.get('username'),
-            company__is_active=True
         ).exists()
         if not company_is_active:
             return Response({'error': 'Company is not verified or not known'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -33,6 +33,10 @@ class CreateUserView(generics.GenericAPIView):
 
     @swagger_auto_schema(responses={201: serializers.info_response, 400: serializers.error_response, 401: serializers.error_response},)
     def post(self, request: HttpRequest) -> Response:
+        """       Create a new user.       <br>
+        Superuser can create users for any company.<br>
+        Admin can only create users for their company.
+        """
         if request.user.is_superuser:
             serializer = serializers.RegisterUserSerializer(data=request.data)
         elif self.request.user.role != UserGroups.ADMIN.value:

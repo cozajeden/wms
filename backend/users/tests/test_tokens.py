@@ -1,6 +1,7 @@
 from rest_framework.test import APIClient
 from ..models import Company, CustomUser
 from typing import Dict, Any, Generator
+from django.utils import timezone
 from rest_framework import status
 from django.test import TestCase
 from django.urls import reverse
@@ -73,7 +74,6 @@ class TestTokensAndUsers(TestCase):
         """Create a new company"""
         company = next(self.random_company)
         response = self.client.post(API.register_company, company)
-        print(response.json())
         assert response.status_code == status.HTTP_201_CREATED
         company = Company.objects.get(name=company['name'])
         company.is_active = verified
@@ -115,9 +115,9 @@ class TestTokensAndUsers(TestCase):
     def test_user_cant_login_unverified_company(self):
         """User can't login if the company is not verified"""
         headers, _ = self.login(self.superuser)
-        for role in CustomUser.ROLE_CHOICES:
+        for role, _ in CustomUser.ROLE_CHOICES:
             user = next(self.random_user)
-            user['role'] = role[0]
+            user['role'] = role
             user['company'] = self.create_comapany().id
             response = self.client.post(API.register_user, user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
@@ -142,3 +142,20 @@ class TestTokensAndUsers(TestCase):
             _, refresh_token = self.login(user)
             response = self.client.post(API.refresh_token, refresh_token)
             assert response.status_code == status.HTTP_200_OK
+
+    def test_cant_login_when_expired(self):
+        """User can't login if the company is expired"""
+        headers, _ = self.login(self.superuser)
+        for role, _ in CustomUser.ROLE_CHOICES:
+            user = next(self.random_user)
+            user['role'] = role
+            user['company'] = self.create_comapany()
+            user['company'].is_active = True
+            user['company'].save()
+            CustomUser.objects.create(**user)
+            response = self.client.post(API.login, user, headers=headers)
+            assert response.status_code == status.HTTP_200_OK
+            user['company'].expiration_date = timezone.now() - timezone.timedelta(days=1)
+            user['company'].save()
+            response = self.client.post(API.login, user, headers=headers)
+            assert response.status_code == status.HTTP_401_UNAUTHORIZED

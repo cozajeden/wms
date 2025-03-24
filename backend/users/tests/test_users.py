@@ -262,7 +262,7 @@ class TestTokensAndUsers(TestCase):
         assert response.status_code == status.HTTP_204_NO_CONTENT
         assert not CustomUser.objects.filter(username=login_user['username']).exists()
 
-    def test_superuser_and_admin_can_delete_user(self):
+    def test_admin_can_delete_user(self):
         """Admin can delete user."""
         login_user = next(self.random_user)
         login_user['company'] = self.default_company_obj

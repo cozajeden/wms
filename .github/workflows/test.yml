@@ -4,6 +4,7 @@ on:
     push:
         branches:
         - backend
+        - main
     pull_request:
         branches:
         - main
@@ -28,9 +29,6 @@ jobs:
 
             - name: Run migrations
               run: cd backend && docker compose -f docker-compose-test.yml exec -T backend python manage.py migrate
-
-            - name: Load initial data
-              run: cd backend && docker compose -f docker-compose-test.yml exec -T backend python manage.py loaddata dev.json
 
             - name: Run tests with Pytest
               run: cd backend && docker compose -f docker-compose-test.yml exec -T backend pytest

@@ -21,6 +21,8 @@ USER user
 
 FROM backend-mid AS backend-dev
 
+COPY requirements_dev.txt /app
+
 RUN pip install -U pip --no-cache-dir && pip install -r requirements_dev.txt --no-cache-dir
 
 COPY . /app

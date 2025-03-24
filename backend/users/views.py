@@ -31,7 +31,7 @@ class CreateUserView(generics.GenericAPIView):
             return serializers.RegisterUserSerializer
         return super().get_serializer_class()
 
-    @swagger_auto_schema(responses={201: serializers.info_response, 400: serializers.error_response, 401: serializers.error_response},)
+    @swagger_auto_schema(responses={201: serializers.info_response, 400: serializers.error_response, 401: serializers.error_response, 403: serializers.error_response},)
     def post(self, request: HttpRequest) -> Response:
         """       Create a new user.       <br>
         Superuser can create users for any company.<br>
@@ -40,7 +40,7 @@ class CreateUserView(generics.GenericAPIView):
         if request.user.is_superuser:
             serializer = serializers.RegisterUserSerializer(data=request.data)
         elif self.request.user.role != UserGroups.ADMIN.value:
-            return Response({'error': 'Only admin can create users'}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({'error': 'Only admin can create users'}, status=status.HTTP_403_FORBIDDEN)
         else:
             # Admin can only create users for their company
             data = request.data.copy()
@@ -61,12 +61,29 @@ class DeleteUserView(generics.DestroyAPIView):
 
     @swagger_auto_schema(responses={204: serializers.info_response, 401: serializers.error_response, 403: serializers.error_response},)
     def delete(self, request: HttpRequest, *args, **kwargs) -> Response:
-        """Delete a user"""
+        """Delete a user, only superuser and admin can delete"""
         user = self.get_object()
         if not request.user.is_superuser and not (user.company_id == request.user.company_id and request.user.role == UserGroups.ADMIN.value):
             return Response({'error': 'You are not allowed to delete this user'}, status=status.HTTP_403_FORBIDDEN)
         user.delete()
         return Response({'message': 'User deleted'}, status=status.HTTP_204_NO_CONTENT)
+
+
+class UpdateUserView(generics.UpdateAPIView):
+    """Update a user's password"""
+    queryset = CustomUser.objects.all()
+    serializer_class = serializers.UpdateUserPasswordSerializer
+    http_method_names = ['patch']
+
+    @swagger_auto_schema(responses={200: serializers.info_response, 400: serializers.error_response, 401: serializers.error_response, 403: serializers.error_response},)
+    def patch(self, request: HttpRequest, *args, **kwargs) -> Response:
+        """Update a user password"""
+        user = self.get_object()
+        if not request.user.is_superuser and not (user.company_id == request.user.company_id and request.user.role == UserGroups.ADMIN.value) and user.id != request.user.id:
+            return Response({'error': 'You are not allowed to update this user'}, status=status.HTTP_403_FORBIDDEN)
+        user.set_password(request.data.get('password'))
+        user.save()
+        return Response({'message': 'User updated'}, status=status.HTTP_200_OK)    
 
 
 class CreateCompanyView(generics.CreateAPIView):

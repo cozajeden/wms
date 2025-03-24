@@ -45,6 +45,10 @@ class API(StrEnum):
     def delete_user(user_pk: int) -> str:
         return reverse('users:delete_user', args=[user_pk])
 
+    @staticmethod
+    def update_user(user_pk: int) -> str:
+        return reverse('users:update_user', args=[user_pk])
+
 
 class TestTokensAndUsers(TestCase):
 
@@ -128,6 +132,21 @@ class TestTokensAndUsers(TestCase):
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
 
+    def test_non_admin_user_cant_create_user(self):
+        """Non-admin users can't create users"""
+        for role, _ in CustomUser.ROLE_CHOICES:
+            if role == UserGroups.ADMIN.value: continue
+            user = next(self.random_user)
+            user['role'] = role
+            user['company'] = self.default_company_obj
+            CustomUser.objects.create(**user)
+            headers, _ = self.login(user)
+            new_user = next(self.random_user)
+            new_user['company'] = self.default_company_obj
+            response = self.client.post(API.register_user, new_user, headers=headers)
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert not CustomUser.objects.filter(username=new_user['username']).exists()
+
     def test_user_cant_login_unverified_company(self):
         """User can't login if the company is not verified"""
         headers, _ = self.login(self.superuser)
@@ -206,3 +225,46 @@ class TestTokensAndUsers(TestCase):
                 response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
                 assert response.status_code == status.HTTP_403_FORBIDDEN
                 assert CustomUser.objects.filter(username=user['username']).exists()
+
+    def test_non_admin_cant_delete_user(self):
+            """
+            Superuser and Admin can delete user.
+            Other roles can't delete user.
+            """
+            login_user = next(self.random_user)
+            login_user['company'] = self.default_company_obj
+            login_user_obj = CustomUser.objects.create(**login_user)
+            for role, _ in CustomUser.ROLE_CHOICES:
+                if role == UserGroups.ADMIN.value: continue
+                login_user_obj.role = role
+                login_user_obj.save()
+                headers, _ = self.login(login_user)
+                user = next(self.random_user)
+                user['company'] = self.default_company_obj
+                user_obj = CustomUser.objects.create(**user)
+                response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
+                assert response.status_code == status.HTTP_403_FORBIDDEN
+                assert CustomUser.objects.filter(username=user['username']).exists()
+
+    def test_superuser_can_delete_user(self):
+            """Superuser can delete user. """
+            headers, _ = self.login(self.superuser)
+            login_user = next(self.random_user)
+            login_user['company'] = self.default_company_obj
+            login_user_obj = CustomUser.objects.create(**login_user)
+            response = self.client.delete(API.delete_user(login_user_obj.id), headers=headers)
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not CustomUser.objects.filter(username=login_user['username']).exists()
+
+    def test_superuser_and_admin_can_delete_user(self):
+            """Admin can delete user."""
+            login_user = next(self.random_user)
+            login_user['company'] = self.default_company_obj
+            CustomUser.objects.create(**login_user)
+            headers, _ = self.login(login_user)
+            user = next(self.random_user)
+            user['company'] = self.default_company_obj
+            user_obj = CustomUser.objects.create(**user)
+            response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
+            assert response.status_code == status.HTTP_204_NO_CONTENT
+            assert not CustomUser.objects.filter(username=user['username']).exists()

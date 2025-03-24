@@ -9,6 +9,12 @@ class CustomUserSerializer(serializers.ModelSerializer):
         fields = ('username', 'password', 'email', 'role')
 
 
+class UpdateUserPasswordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ('password',)
+
+
 class RegisterCompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company

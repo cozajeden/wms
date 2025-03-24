@@ -29,6 +29,16 @@ jobs:
                 username: ${{ github.actor }}
                 password: ${{ secrets.GITHUB_TOKEN }}
 
+            - name: Build and Push Docker Image to GitHub Container Registry
+              uses: docker/build-push-action@v5
+              with:
+                context: .
+                file: Dockerfile.dev
+                push: true
+                tags: ghcr.io/cozajeden/backend:latest
+                cache-from: type=registry,ref=ghcr.io/cozajeden/backend:cache
+                cache-to: type=registry,ref=ghcr.io/cozajeden/backend:cache,mode=max
+
             - name: Build and start containers
               run: docker compose -f docker-compose-test.yml up -d
 

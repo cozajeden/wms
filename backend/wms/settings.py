@@ -60,7 +60,10 @@ MIDDLEWARE = [
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
-    )
+    ),
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ]
 }
 
 ROOT_URLCONF = 'wms.urls'
@@ -154,3 +157,4 @@ EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", True)
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 SERVER_EMAIL = EMAIL_HOST_USER
 EMAIL_ACCEPT_ADDRESS = os.environ.get("EMAIL_ACCEPT_ADDRESS", "email@email.com")
+EMAIL_ACCEPT_URL = os.environ.get("EMAIL_ACCEPT_URL", "http://localhost:8000/api/users/register/company/accept")

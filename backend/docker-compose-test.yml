@@ -1,5 +1,5 @@
 x-base-backend-template: &backend-template
-  image: localhost:5000/backend:latest
+  image: ghcr.io/cozajeden/backend:latest
   build:
     context: .
     dockerfile: Dockerfile.dev

@@ -13,21 +13,6 @@ jobs:
     backend-tests:
         runs-on: ubuntu-latest
 
-        services:
-            backend-db:
-              image: postgres:latest
-              env:
-                POSTGRES_USER: backend
-                POSTGRES_PASSWORD: backend
-                POSTGRES_DB: backend
-              ports:
-                - 5432:5432
-              options: >-
-                --health-cmd "pg_isready -U backend -d backend"
-                --health-interval 10s
-                --health-timeout 5s
-                --health-retries 5
-
         steps:
             - name: Checkout code
               uses: actions/checkout@v3

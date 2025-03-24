@@ -11,3 +11,10 @@ services:
   backend:
     <<: *backend-template
     command: ["gunicorn", "--bind", "0.0.0.0:8000", "wms.wsgi:application", "--workers", "2"]
+
+  backend-db:
+    image: postgres:latest
+    ports:
+      - "5432:5432"
+    env_file:
+      - env

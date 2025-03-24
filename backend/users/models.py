@@ -40,7 +40,6 @@ class CompanyManager(models.Manager):
         msg.attach_alternative(html_content, "text/html")
         msg.send()
         return created_company
-        
 
 
 class Company(models.Model):

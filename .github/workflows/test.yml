@@ -1,0 +1,39 @@
+name: Backend Tests
+
+on:
+    push:
+        branches:
+        - backend
+    pull_request:
+        branches:
+        - main
+
+
+jobs:
+    backend-tests:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+              uses: actions/checkout@v3
+
+            - name: Set up Docker Buildx
+              uses: docker/setup-buildx-action@v2
+      
+            - name: Build and start containers
+              run: cd backend && docker compose -f docker-compose-test.yml up -d
+
+            - name: Wait for services to start
+              run: sleep 30
+
+            - name: Run migrations
+              run: cd backend && docker compose -f docker-compose-test.yml exec -T backend python manage.py migrate
+
+            - name: Load initial data
+              run: cd backend && docker compose -f docker-compose-test.yml exec -T backend python manage.py loaddata dev.json
+
+            - name: Run tests with Pytest
+              run: cd backend && docker compose -f docker-compose-test.yml exec -T backend pytest
+
+            - name: Stop Docker containers
+              run: cd backend && docker compose -f docker-compose-test.yml down

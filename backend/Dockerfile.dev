@@ -9,19 +9,7 @@ RUN pip install -U pip --no-cache-dir && pip install -r requirements.txt --no-ca
 COPY . /app
 RUN rm -r static nginx
 
-FROM python:3.13-alpine3.21 AS backend-prod
-
-RUN mkdir /app
-WORKDIR /app
-
-COPY --from=backen-build /usr/local/lib/python3.13/site-packages /usr/local/lib/python3.13/site-packages
-COPY --from=backen-build /usr/local/bin/gunicorn /usr/local/bin
-COPY --from=backen-build /app /app
-
-RUN adduser --disabled-password user
-USER user
-
-FROM python:3.13-alpine3.21 AS backend-dev
+FROM python:3.13-alpine3.21 AS backend-mid
 
 RUN mkdir /app
 WORKDIR /app
@@ -30,5 +18,11 @@ COPY --from=backend-build /usr/local/lib/python3.13/site-packages /usr/local/lib
 COPY --from=backend-build /usr/local/bin/gunicorn /usr/local/bin
 COPY --from=backend-build /app /app
 
-COPY requirements_dev.txt /app
+FROM backend-mid AS backend-prod
+
+RUN adduser --disabled-password user
+USER user
+
+FROM backend-mid AS backend-dev
+
 RUN pip install -U pip --no-cache-dir && pip install -r requirements_dev.txt --no-cache-dir

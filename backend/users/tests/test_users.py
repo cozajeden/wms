@@ -195,82 +195,85 @@ class TestTokensAndUsers(TestCase):
             assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_superuser_and_admin_can_delete_user(self):
-            """
-            Superuser and Admin can delete user.
-            Other roles can't delete user.
-            """
-            headers, _ = self.login(self.superuser)
-            login_user = next(self.random_user)
-            login_user['company'] = self.default_company_obj
-            login_user_obj = CustomUser.objects.create(**login_user)
-            # Superuser can delete any user
-            response = self.client.delete(API.delete_user(login_user_obj.id), headers=headers)
-            assert response.status_code == status.HTTP_204_NO_CONTENT
-            assert not CustomUser.objects.filter(username=login_user['username']).exists()
-            login_user_obj = CustomUser.objects.create(**login_user)
+        """
+        Superuser and Admin can delete user.
+        Other roles can't delete user.
+        """
+        headers, _ = self.login(self.superuser)
+        login_user = next(self.random_user)
+        login_user['company'] = self.default_company_obj
+        login_user_obj = CustomUser.objects.create(**login_user)
+        # Superuser can delete any user
+        response = self.client.delete(API.delete_user(login_user_obj.id), headers=headers)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not CustomUser.objects.filter(username=login_user['username']).exists()
+        login_user_obj = CustomUser.objects.create(**login_user)
+        headers, _ = self.login(login_user)
+        user = next(self.random_user)
+        user['company'] = self.default_company_obj
+        user_obj = CustomUser.objects.create(**user)
+        # Admin can delete only users from their company
+        response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not CustomUser.objects.filter(username=user['username']).exists()
+        for role, _ in CustomUser.ROLE_CHOICES:
+            if role == UserGroups.ADMIN.value: continue
+            login_user_obj.role = role
+            login_user_obj.save()
             headers, _ = self.login(login_user)
             user = next(self.random_user)
             user['company'] = self.default_company_obj
             user_obj = CustomUser.objects.create(**user)
-            # Admin can delete only users from their company
+            # Other roles can't delete user
             response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
-            assert response.status_code == status.HTTP_204_NO_CONTENT
-            assert not CustomUser.objects.filter(username=user['username']).exists()
-            for role, _ in CustomUser.ROLE_CHOICES:
-                if role == UserGroups.ADMIN.value: continue
-                login_user_obj.role = role
-                login_user_obj.save()
-                headers, _ = self.login(login_user)
-                user = next(self.random_user)
-                user['company'] = self.default_company_obj
-                user_obj = CustomUser.objects.create(**user)
-                # Other roles can't delete user
-                response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
-                assert response.status_code == status.HTTP_403_FORBIDDEN
-                assert CustomUser.objects.filter(username=user['username']).exists()
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert CustomUser.objects.filter(username=user['username']).exists()
+            response = self.client.delete(API.delete_user(login_user_obj.id), headers=headers)
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert CustomUser.objects.filter(username=login_user['username']).exists()
 
     def test_non_admin_cant_delete_user(self):
-            """
-            Superuser and Admin can delete user.
-            Other roles can't delete user.
-            """
-            login_user = next(self.random_user)
-            login_user['company'] = self.default_company_obj
-            login_user_obj = CustomUser.objects.create(**login_user)
-            for role, _ in CustomUser.ROLE_CHOICES:
-                if role == UserGroups.ADMIN.value: continue
-                login_user_obj.role = role
-                login_user_obj.save()
-                headers, _ = self.login(login_user)
-                user = next(self.random_user)
-                user['company'] = self.default_company_obj
-                user_obj = CustomUser.objects.create(**user)
-                response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
-                assert response.status_code == status.HTTP_403_FORBIDDEN
-                assert CustomUser.objects.filter(username=user['username']).exists()
-
-    def test_superuser_can_delete_user(self):
-            """Superuser can delete user. """
-            headers, _ = self.login(self.superuser)
-            login_user = next(self.random_user)
-            login_user['company'] = self.default_company_obj
-            login_user_obj = CustomUser.objects.create(**login_user)
-            response = self.client.delete(API.delete_user(login_user_obj.id), headers=headers)
-            assert response.status_code == status.HTTP_204_NO_CONTENT
-            assert not CustomUser.objects.filter(username=login_user['username']).exists()
-
-    def test_superuser_and_admin_can_delete_user(self):
-            """Admin can delete user."""
-            login_user = next(self.random_user)
-            login_user['company'] = self.default_company_obj
-            CustomUser.objects.create(**login_user)
+        """
+        Superuser and Admin can delete user.
+        Other roles can't delete user.
+        """
+        login_user = next(self.random_user)
+        login_user['company'] = self.default_company_obj
+        login_user_obj = CustomUser.objects.create(**login_user)
+        for role, _ in CustomUser.ROLE_CHOICES:
+            if role == UserGroups.ADMIN.value: continue
+            login_user_obj.role = role
+            login_user_obj.save()
             headers, _ = self.login(login_user)
             user = next(self.random_user)
             user['company'] = self.default_company_obj
             user_obj = CustomUser.objects.create(**user)
             response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
-            assert response.status_code == status.HTTP_204_NO_CONTENT
-            assert not CustomUser.objects.filter(username=user['username']).exists()
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert CustomUser.objects.filter(username=user['username']).exists()
+
+    def test_superuser_can_delete_user(self):
+        """Superuser can delete user. """
+        headers, _ = self.login(self.superuser)
+        login_user = next(self.random_user)
+        login_user['company'] = self.default_company_obj
+        login_user_obj = CustomUser.objects.create(**login_user)
+        response = self.client.delete(API.delete_user(login_user_obj.id), headers=headers)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not CustomUser.objects.filter(username=login_user['username']).exists()
+
+    def test_superuser_and_admin_can_delete_user(self):
+        """Admin can delete user."""
+        login_user = next(self.random_user)
+        login_user['company'] = self.default_company_obj
+        CustomUser.objects.create(**login_user)
+        headers, _ = self.login(login_user)
+        user = next(self.random_user)
+        user['company'] = self.default_company_obj
+        user_obj = CustomUser.objects.create(**user)
+        response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
+        assert response.status_code == status.HTTP_204_NO_CONTENT
+        assert not CustomUser.objects.filter(username=user['username']).exists()
 
     def test_superuser_can_update_user_password(self):
         """Superuser can update user password"""

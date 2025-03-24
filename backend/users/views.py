@@ -77,13 +77,13 @@ class UpdateUserView(generics.UpdateAPIView):
 
     @swagger_auto_schema(responses={200: serializers.info_response, 400: serializers.error_response, 401: serializers.error_response, 403: serializers.error_response},)
     def patch(self, request: HttpRequest, *args, **kwargs) -> Response:
-        """Update a user password"""
+        """Update a user's password"""
         user = self.get_object()
         if not request.user.is_superuser and not (user.company_id == request.user.company_id and request.user.role == UserGroups.ADMIN.value) and user.id != request.user.id:
-            return Response({'error': 'You are not allowed to update this user'}, status=status.HTTP_403_FORBIDDEN)
+            return Response({'error': 'You are not allowed to update this user\'s password'}, status=status.HTTP_403_FORBIDDEN)
         user.set_password(request.data.get('password'))
         user.save()
-        return Response({'message': 'User updated'}, status=status.HTTP_200_OK)    
+        return Response({'message': 'User updated'}, status=status.HTTP_200_OK)
 
 
 class CreateCompanyView(generics.CreateAPIView):

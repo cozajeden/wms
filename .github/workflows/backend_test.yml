@@ -52,11 +52,16 @@ jobs:
             - name: Run migrations
               run: docker compose -f docker-compose-test.yml exec -T backend python manage.py migrate
 
-            - name: Run tests with Pytest
-              run: docker compose -f docker-compose-test.yml exec -T backend pytest
+            - name: Run Pytest
+              run: docker compose -f docker-compose-test.yml exec -T backend pytest --cov=. --cov-report=json
 
-            - name: Stop Docker containers
+            - name: If coverage is below 90%, fail the build
+              run: |
+                coverage=$(jq -r '.total.covered_percent' coverage.json)
+                if (( $(echo "$coverage < 90" | bc -l) )); then
+                  echo "Coverage is below 90% ($coverage%)"
+                  exit 1
+                fi
+
+            - name: Stop containers
               run: docker compose -f docker-compose-test.yml down
-
-            - name: Print Test Secret
-              run: echo ${{ secrets.TEST_SECRET }}

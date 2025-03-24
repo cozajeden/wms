@@ -2,7 +2,7 @@ x-base-backend-template: &backend-template
   image: ghcr.io/cozajeden/backend:latest
   build:
     context: .
-    dockerfile: Dockerfile.dev
+    dockerfile: Dockerfile
     target: backend-dev
   env_file:
     - env

@@ -2,7 +2,7 @@ x-base-backend-template: &backend-template
   image: localhost:5000/backend:latest
   build:
     context: .
-    dockerfile: Dockerfile.dev
+    dockerfile: Dockerfile
     target: backend-dev
   restart: on-failure
   env_file:

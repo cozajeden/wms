@@ -49,6 +49,9 @@ class API(StrEnum):
     def update_user(user_pk: int) -> str:
         return reverse('users:update_user', args=[user_pk])
 
+    def update_user_password(user_pk: int) -> str:
+        return reverse('users:update_user_password', args=[user_pk])
+
 
 class TestTokensAndUsers(TestCase):
 
@@ -268,3 +271,49 @@ class TestTokensAndUsers(TestCase):
             response = self.client.delete(API.delete_user(user_obj.id), headers=headers)
             assert response.status_code == status.HTTP_204_NO_CONTENT
             assert not CustomUser.objects.filter(username=user['username']).exists()
+
+    def test_superuser_can_update_user_password(self):
+        """Superuser can update user password"""
+        headers, _ = self.login(self.superuser)
+        login_user = next(self.random_user)
+        login_user['company'] = self.default_company_obj
+        login_user_obj = CustomUser.objects.create(**login_user)
+        login_user['password'] = faker.password()
+        login_user.pop('company')
+        response = self.client.patch(
+            API.update_user_password(login_user_obj.id), login_user, headers=headers, content_type='application/json')
+        print(response.json())
+        assert response.status_code == status.HTTP_200_OK
+        response = self.client.post(API.login, login_user)
+        assert response.status_code == status.HTTP_200_OK
+
+    def test_admin_can_update_user_password_within_the_same_company(self):
+        """Admin can update user password within the same company"""
+        admin_user = next(self.random_user)
+        admin_user['company'] = self.default_company_obj
+        admin_user_obj = CustomUser.objects.create(**admin_user)
+        headers, _ = self.login(admin_user)
+        user = next(self.random_user)
+        user['company'] = self.default_company_obj
+        user_obj = CustomUser.objects.create(**user)
+        user.pop('company')
+        user['password'] = faker.password()
+        # The same company
+        response = self.client.patch(
+            API.update_user_password(user_obj.id), user, headers=headers, content_type='application/json')
+        assert response.status_code == status.HTTP_200_OK
+        response = self.client.post(API.login, user)
+        assert response.status_code == status.HTTP_200_OK
+        company = next(self.random_company)
+        company['is_active'] = True
+        company_obj = Company.objects.create(**company)
+        admin_user_obj.company = company_obj
+        admin_user_obj.save()
+        user['password'] = faker.password()
+        headers, _ = self.login(admin_user)
+        # Different company
+        response = self.client.patch(
+            API.update_user_password(user_obj.id), user, headers=headers, content_type='application/json')
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        response = self.client.post(API.login, user)
+        assert response.status_code == status.HTTP_401_UNAUTHORIZED

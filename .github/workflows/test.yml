@@ -33,7 +33,7 @@ jobs:
               uses: docker/build-push-action@v5
               with:
                 context: ./backend
-                file: Dockerfile.dev
+                file: ./backend/Dockerfile.dev
                 push: true
                 tags: ghcr.io/cozajeden/backend:latest
                 cache-from: type=registry,ref=ghcr.io/cozajeden/backend:cache

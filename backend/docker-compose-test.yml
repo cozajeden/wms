@@ -1,0 +1,13 @@
+x-base-backend-template: &backend-template
+  image: localhost:5000/backend:latest
+  build:
+    context: .
+    dockerfile: Dockerfile.dev
+    target: backend-dev
+  env_file:
+    - env
+
+services:
+  backend:
+    <<: *backend-template
+    command: ["gunicorn", "--bind", "0.0.0.0:8000", "wms.wsgi:application", "--workers", "2"]

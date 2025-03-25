@@ -59,7 +59,7 @@ jobs:
             - name: Stop containers
               run: docker compose -f docker-compose-test.yml down
               
-            - name: Merge to main
+            - name: Merge to main if on backend branch
               if: github.ref == 'refs/heads/backend' && github.event_name == 'push'
               run: |
                 git config --global user.name 'GitHub Actions'

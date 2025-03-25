@@ -118,7 +118,7 @@ class TestTokensAndUsers(TestCase):
 
     def tearDown(self) -> None:
         """Clean up test data after each test."""
-        CustomUser.objects.exclude(username=self.superuser_obj.username).all().delete()
+        CustomUser.objects.exclude(username=self.superuser_obj.username).delete()
         Company.objects.exclude(id=1).delete()
         return super().tearDown()
 

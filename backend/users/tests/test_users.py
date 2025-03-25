@@ -16,7 +16,6 @@ from django.utils import timezone
 from rest_framework import status
 from rest_framework.test import APIClient
 from faker import Faker
-
 from ..models import Company, CustomUser, UserGroups
 
 faker = Faker()

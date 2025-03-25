@@ -59,8 +59,11 @@ jobs:
               run: docker compose -f docker-compose-test.yml down
               
             - name: Merge to main
-              if: github.ref == 'refs/heads/backend'
+              if: github.ref == 'refs/heads/backend' && github.event_name == 'push'
               run: |
+                git config --global user.name 'GitHub Actions'
+                git config --global user.email 'github-actions@github.com'
                 git checkout main
-                git merge --no-ff ${{ github.ref }}
+                git pull origin main
+                git merge backend
                 git push origin main

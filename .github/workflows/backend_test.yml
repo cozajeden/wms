@@ -4,11 +4,9 @@ on:
     push:
         branches:
         - backend
-        - main
     pull_request:
         branches:
         - main
-
 
 jobs:
     backend-tests:
@@ -17,12 +15,14 @@ jobs:
             run:
                 working-directory: backend
         permissions:
-            contents: read
+            contents: write
             packages: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
-              
+              with:
+                fetch-depth: 0
+                
             - name: Set up Docker Buildx
               uses: docker/setup-buildx-action@v2
               
@@ -63,7 +63,17 @@ jobs:
               run: |
                 git config --global user.name 'GitHub Actions'
                 git config --global user.email 'github-actions@github.com'
+                git fetch origin main
                 git checkout main
-                git pull origin main
-                git merge backend
+                git merge origin/backend || {
+                  echo "Merge failed. Creating pull request..."
+                  gh pr create \
+                    --title "Merge backend into main" \
+                    --body "Automated PR to merge backend into main" \
+                    --base main \
+                    --head backend
+                  exit 1
+                }
                 git push origin main
+              env:
+                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

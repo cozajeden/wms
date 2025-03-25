@@ -58,22 +58,3 @@ jobs:
             - name: Stop containers
               run: docker compose -f docker-compose-test.yml down
               
-            - name: Merge to main if on backend branch
-              if: github.ref == 'refs/heads/backend' && github.event_name == 'push'
-              run: |
-                git config --global user.name 'GitHub Actions'
-                git config --global user.email 'github-actions@github.com'
-                git fetch origin main
-                git checkout main
-                git merge origin/backend || {
-                  echo "Merge failed. Creating pull request..."
-                  gh pr create \
-                    --title "Merge backend into main" \
-                    --body "Automated PR to merge backend into main" \
-                    --base main \
-                    --head backend
-                  exit 1
-                }
-                git push origin main
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

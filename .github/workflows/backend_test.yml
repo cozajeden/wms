@@ -17,6 +17,7 @@ jobs:
         permissions:
             contents: write
             packages: write
+            pull-requests: write
         steps:
             - name: Checkout code
               uses: actions/checkout@v3
@@ -57,23 +58,27 @@ jobs:
               
             - name: Stop containers
               run: docker compose -f docker-compose-test.yml down
-              
-            - name: Merge to main if on backend branch
-              if: github.ref == 'refs/heads/backend' && github.event_name == 'push'
+
+            - name: Configure Git
               run: |
-                git config --global user.name 'GitHub Actions'
-                git config --global user.email 'github-actions@github.com'
+                git config --global user.name 'github-actions[bot]'
+                git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+
+            - name: Merge main into current branch
+              run: |
                 git fetch origin main
-                git checkout main
-                git merge origin/backend || {
-                  echo "Merge failed. Creating pull request..."
-                  gh pr create \
-                    --title "Merge backend into main" \
-                    --body "Automated PR to merge backend into main" \
-                    --base main \
-                    --head backend
-                  exit 1
-                }
-                git push origin main
-              env:
-                GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                git merge origin/main --no-edit
+                git push origin ${{ github.ref }}
+
+            - name: Create Pull Request
+              uses: peter-evans/create-pull-request@v5
+              with:
+                token: ${{ secrets.GITHUB_TOKEN }}
+                branch: ${{ github.ref }}
+                base: main
+                title: 'Merge ${{ github.ref }} into main'
+                body: |
+                  This PR merges the tested ${{ github.ref }} branch into main.
+                  All tests have passed successfully with coverage above 80%.
+                draft: false
+                delete-branch: false

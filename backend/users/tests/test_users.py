@@ -25,9 +25,9 @@ class API:
     """API endpoint constants for user-related operations."""
     
     login = reverse('users:login')
-    register_user = reverse('users:register_user')
+    create_user = reverse('users:create_user')
     refresh_token = reverse('users:refresh_token')
-    register_company = reverse('users:register_company')
+    create_company = reverse('users:create_company')
 
     @staticmethod
     def delete_user(user_pk: int) -> str:
@@ -43,6 +43,11 @@ class API:
     def update_user_password(user_pk: int) -> str:
         """Get URL for updating a user's password."""
         return reverse('users:update_user_password', args=[user_pk])
+
+    @staticmethod
+    def accept_company(user_pk: int) -> str:
+        """Get URL for accepting a company."""
+        return reverse('users:accept_company', args=[user_pk])
 
 
 def user_generator() -> Generator[Dict[str, Any], None, None]:
@@ -151,7 +156,7 @@ class TestTokensAndUsers(TestCase):
             Created Company instance
         """
         company = self.random_company()
-        response = self.client.post(API.register_company, company)
+        response = self.client.post(API.create_company, company)
         assert response.status_code == status.HTTP_201_CREATED
         company = Company.objects.get(name=company['name'])
         company.is_active = verified
@@ -167,7 +172,7 @@ class TestTokensAndUsers(TestCase):
             - User is not created in database
         """
         user = self.random_user()
-        response = self.client.post(API.register_user, user)
+        response = self.client.post(API.create_user, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert not CustomUser.objects.filter(**user).exists()
 
@@ -181,7 +186,7 @@ class TestTokensAndUsers(TestCase):
             - User is not created in database
         """
         user = self.random_user()
-        response = self.client.post(API.register_user, user)
+        response = self.client.post(API.create_user, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert not CustomUser.objects.filter(**user).exists()
         response = self.client.post(API.refresh_token, {'refresh': 'token'})
@@ -200,7 +205,7 @@ class TestTokensAndUsers(TestCase):
         for company in [self.create_company(), self.create_company(verified=True)]:
             user = self.random_user()
             user['company'] = company.id
-            response = self.client.post(API.register_user, user, headers=headers)
+            response = self.client.post(API.create_user, user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
             assert CustomUser.objects.filter(username=user['username']).exists()
 
@@ -216,14 +221,14 @@ class TestTokensAndUsers(TestCase):
         headers, _ = self.login(self.superuser)
         admin_user = self.random_user()
         admin_user['company'] = self.create_company(True).id
-        response = self.client.post(API.register_user, admin_user, headers=headers)
+        response = self.client.post(API.create_user, admin_user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
         
         headers, _ = self.login(admin_user)
         user = self.random_user()
         user['company'] = self.default_company_obj.id
-        response = self.client.post(API.register_user, user, headers=headers)
+        response = self.client.post(API.create_user, user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
 
@@ -248,7 +253,7 @@ class TestTokensAndUsers(TestCase):
             headers, _ = self.login(user)
             new_user = self.random_user()
             new_user['company'] = self.default_company_obj
-            response = self.client.post(API.register_user, new_user, headers=headers)
+            response = self.client.post(API.create_user, new_user, headers=headers)
             assert response.status_code == status.HTTP_403_FORBIDDEN
             assert not CustomUser.objects.filter(username=new_user['username']).exists()
 
@@ -266,7 +271,7 @@ class TestTokensAndUsers(TestCase):
             user = self.random_user()
             user['role'] = role
             user['company'] = self.create_company().id
-            response = self.client.post(API.register_user, user, headers=headers)
+            response = self.client.post(API.create_user, user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
             assert CustomUser.objects.filter(username=user['username']).exists()
             response = self.client.post(API.login, user)
@@ -446,3 +451,87 @@ class TestTokensAndUsers(TestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         response = self.client.post(API.login, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_superuser_can_accept_company(self) -> None:
+        """
+        Test that superuser can accept a company.
+        
+        Verifies:
+            - 200 status code for company acceptance
+            - Company is_active status is updated to True
+            - Success message is returned
+        """
+        headers, _ = self.login(self.superuser)
+        company = self.create_company()
+        user = self.random_user()
+        user['company'] = company
+        user_obj = CustomUser.objects.create(**user)
+        
+        response = self.client.patch(
+            API.accept_company(user_obj.id),
+            {'is_active': True},
+            headers=headers,
+            content_type='application/json'
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()['message'] == 'Company accepted'
+        
+        company.refresh_from_db()
+        assert company.is_active is True
+
+    def test_non_superuser_cannot_accept_company(self) -> None:
+        """
+        Test that non-superusers cannot accept companies.
+        
+        Verifies:
+            - 403 status code for non-superuser attempts
+            - Company is_active status remains unchanged
+            - Error message is returned
+        """
+        # Create admin user
+        admin_user = self.random_user()
+        admin_user['company'] = self.default_company_obj
+        admin_user_obj = CustomUser.objects.create(**admin_user)
+        headers, _ = self.login(admin_user)
+        
+        # Create company to accept
+        company = self.create_company()
+        user = self.random_user()
+        user['company'] = company
+        user_obj = CustomUser.objects.create(**user)
+        
+        # Test admin cannot accept company
+        response = self.client.patch(
+            API.accept_company(user_obj.id),
+            {'is_active': True},
+            headers=headers,
+            content_type='application/json'
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.json()['error'] == 'You are not allowed to accept companies'
+        
+        company.refresh_from_db()
+        assert company.is_active is False
+        
+        # Test other roles cannot accept company
+        for role, _ in CustomUser.ROLE_CHOICES:
+            if role == UserGroups.ADMIN.value:
+                continue
+                
+            regular_user = self.random_user()
+            regular_user['company'] = self.default_company_obj
+            regular_user['role'] = role
+            regular_user_obj = CustomUser.objects.create(**regular_user)
+            headers, _ = self.login(regular_user)
+            
+            response = self.client.patch(
+                API.accept_company(user_obj.id),
+                {'is_active': True},
+                headers=headers,
+                content_type='application/json'
+            )
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert response.json()['error'] == 'You are not allowed to accept companies'
+            
+            company.refresh_from_db()
+            assert company.is_active is False

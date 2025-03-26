@@ -44,6 +44,11 @@ class API:
         """Get URL for updating a user's password."""
         return reverse('users:update_user_password', args=[user_pk])
 
+    @staticmethod
+    def accept_company(user_pk: int) -> str:
+        """Get URL for accepting a company."""
+        return reverse('users:accept_company', args=[user_pk])
+
 
 def user_generator() -> Generator[Dict[str, Any], None, None]:
     """
@@ -446,3 +451,87 @@ class TestTokensAndUsers(TestCase):
         assert response.status_code == status.HTTP_403_FORBIDDEN
         response = self.client.post(API.login, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    def test_superuser_can_accept_company(self) -> None:
+        """
+        Test that superuser can accept a company.
+        
+        Verifies:
+            - 200 status code for company acceptance
+            - Company is_active status is updated to True
+            - Success message is returned
+        """
+        headers, _ = self.login(self.superuser)
+        company = self.create_company()
+        user = self.random_user()
+        user['company'] = company
+        user_obj = CustomUser.objects.create(**user)
+        
+        response = self.client.patch(
+            API.accept_company(user_obj.id),
+            {'is_active': True},
+            headers=headers,
+            content_type='application/json'
+        )
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()['message'] == 'Company accepted'
+        
+        company.refresh_from_db()
+        assert company.is_active is True
+
+    def test_non_superuser_cannot_accept_company(self) -> None:
+        """
+        Test that non-superusers cannot accept companies.
+        
+        Verifies:
+            - 403 status code for non-superuser attempts
+            - Company is_active status remains unchanged
+            - Error message is returned
+        """
+        # Create admin user
+        admin_user = self.random_user()
+        admin_user['company'] = self.default_company_obj
+        admin_user_obj = CustomUser.objects.create(**admin_user)
+        headers, _ = self.login(admin_user)
+        
+        # Create company to accept
+        company = self.create_company()
+        user = self.random_user()
+        user['company'] = company
+        user_obj = CustomUser.objects.create(**user)
+        
+        # Test admin cannot accept company
+        response = self.client.patch(
+            API.accept_company(user_obj.id),
+            {'is_active': True},
+            headers=headers,
+            content_type='application/json'
+        )
+        assert response.status_code == status.HTTP_403_FORBIDDEN
+        assert response.json()['error'] == 'You are not allowed to accept companies'
+        
+        company.refresh_from_db()
+        assert company.is_active is False
+        
+        # Test other roles cannot accept company
+        for role, _ in CustomUser.ROLE_CHOICES:
+            if role == UserGroups.ADMIN.value:
+                continue
+                
+            regular_user = self.random_user()
+            regular_user['company'] = self.default_company_obj
+            regular_user['role'] = role
+            regular_user_obj = CustomUser.objects.create(**regular_user)
+            headers, _ = self.login(regular_user)
+            
+            response = self.client.patch(
+                API.accept_company(user_obj.id),
+                {'is_active': True},
+                headers=headers,
+                content_type='application/json'
+            )
+            assert response.status_code == status.HTTP_403_FORBIDDEN
+            assert response.json()['error'] == 'You are not allowed to accept companies'
+            
+            company.refresh_from_db()
+            assert company.is_active is False

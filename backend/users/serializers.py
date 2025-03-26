@@ -25,7 +25,7 @@ class UpdateUserPasswordSerializer(serializers.ModelSerializer):
         }
 
 
-class RegisterCompanySerializer(serializers.ModelSerializer):
+class CreateCompanySerializer(serializers.ModelSerializer):
     """Serializer for company registration."""
     
     class Meta:
@@ -39,7 +39,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         return value
 
 
-class RegisterUserSerializer(serializers.ModelSerializer):
+class CreateUserSerializer(serializers.ModelSerializer):
     """Serializer for user registration."""
     
     class Meta:
@@ -67,6 +67,14 @@ class LoginResponseSerializer(serializers.Serializer):
     
     access = serializers.CharField(help_text='Access token')
     refresh = serializers.CharField(help_text='Refresh token')
+
+
+class AcceptCompanySerializer(serializers.ModelSerializer):
+    """Serializer for accepting company registration."""
+    
+    class Meta:
+        model = Company
+        fields = ('is_active',)
 
 
 # Swagger documentation response schemas

@@ -25,9 +25,9 @@ class API:
     """API endpoint constants for user-related operations."""
     
     login = reverse('users:login')
-    register_user = reverse('users:register_user')
+    create_user = reverse('users:create_user')
     refresh_token = reverse('users:refresh_token')
-    register_company = reverse('users:register_company')
+    create_company = reverse('users:create_company')
 
     @staticmethod
     def delete_user(user_pk: int) -> str:
@@ -151,7 +151,7 @@ class TestTokensAndUsers(TestCase):
             Created Company instance
         """
         company = self.random_company()
-        response = self.client.post(API.register_company, company)
+        response = self.client.post(API.create_company, company)
         assert response.status_code == status.HTTP_201_CREATED
         company = Company.objects.get(name=company['name'])
         company.is_active = verified
@@ -167,7 +167,7 @@ class TestTokensAndUsers(TestCase):
             - User is not created in database
         """
         user = self.random_user()
-        response = self.client.post(API.register_user, user)
+        response = self.client.post(API.create_user, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert not CustomUser.objects.filter(**user).exists()
 
@@ -181,7 +181,7 @@ class TestTokensAndUsers(TestCase):
             - User is not created in database
         """
         user = self.random_user()
-        response = self.client.post(API.register_user, user)
+        response = self.client.post(API.create_user, user)
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
         assert not CustomUser.objects.filter(**user).exists()
         response = self.client.post(API.refresh_token, {'refresh': 'token'})
@@ -200,7 +200,7 @@ class TestTokensAndUsers(TestCase):
         for company in [self.create_company(), self.create_company(verified=True)]:
             user = self.random_user()
             user['company'] = company.id
-            response = self.client.post(API.register_user, user, headers=headers)
+            response = self.client.post(API.create_user, user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
             assert CustomUser.objects.filter(username=user['username']).exists()
 
@@ -216,14 +216,14 @@ class TestTokensAndUsers(TestCase):
         headers, _ = self.login(self.superuser)
         admin_user = self.random_user()
         admin_user['company'] = self.create_company(True).id
-        response = self.client.post(API.register_user, admin_user, headers=headers)
+        response = self.client.post(API.create_user, admin_user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.filter(username=admin_user['username']).exists()
         
         headers, _ = self.login(admin_user)
         user = self.random_user()
         user['company'] = self.default_company_obj.id
-        response = self.client.post(API.register_user, user, headers=headers)
+        response = self.client.post(API.create_user, user, headers=headers)
         assert response.status_code == status.HTTP_201_CREATED
         assert CustomUser.objects.get(username=user['username']).company_id == admin_user['company']
 
@@ -248,7 +248,7 @@ class TestTokensAndUsers(TestCase):
             headers, _ = self.login(user)
             new_user = self.random_user()
             new_user['company'] = self.default_company_obj
-            response = self.client.post(API.register_user, new_user, headers=headers)
+            response = self.client.post(API.create_user, new_user, headers=headers)
             assert response.status_code == status.HTTP_403_FORBIDDEN
             assert not CustomUser.objects.filter(username=new_user['username']).exists()
 
@@ -266,7 +266,7 @@ class TestTokensAndUsers(TestCase):
             user = self.random_user()
             user['role'] = role
             user['company'] = self.create_company().id
-            response = self.client.post(API.register_user, user, headers=headers)
+            response = self.client.post(API.create_user, user, headers=headers)
             assert response.status_code == status.HTTP_201_CREATED
             assert CustomUser.objects.filter(username=user['username']).exists()
             response = self.client.post(API.login, user)

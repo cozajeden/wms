@@ -60,7 +60,7 @@ class CreateUserView(generics.GenericAPIView):
     def get_serializer_class(self) -> type[ModelSerializer]:
         """Get appropriate serializer based on user role."""
         if self.request.user.is_superuser:
-            return serializers.RegisterUserSerializer
+            return serializers.CreateUserSerializer
         return super().get_serializer_class()
 
     @swagger_auto_schema(
@@ -87,7 +87,7 @@ class CreateUserView(generics.GenericAPIView):
             Response: 400 error if validation fails
         """
         if request.user.is_superuser:
-            serializer = serializers.RegisterUserSerializer(data=request.data)
+            serializer = serializers.CreateUserSerializer(data=request.data)
         elif self.request.user.role != UserGroups.ADMIN.value:
             return Response(
                 {'error': 'Only admin can create users'},
@@ -96,7 +96,7 @@ class CreateUserView(generics.GenericAPIView):
         else:
             data = request.data.copy()
             data['company'] = request.user.company_id
-            serializer = serializers.RegisterUserSerializer(data=data)
+            serializer = serializers.CreateUserSerializer(data=data)
             
         try:
             serializer.is_valid(raise_exception=True)
@@ -208,5 +208,49 @@ class UpdateUserView(generics.UpdateAPIView):
 class CreateCompanyView(generics.CreateAPIView):
     """View for creating new companies."""
     
-    serializer_class = serializers.RegisterCompanySerializer
+    serializer_class = serializers.CreateCompanySerializer
     permission_classes = [permissions.AllowAny]
+
+
+class AcceptCompanyView(generics.UpdateAPIView):
+    """View for accepting companies."""
+    
+    queryset = CustomUser.objects.all()
+    serializer_class = serializers.AcceptCompanySerializer
+
+    @swagger_auto_schema(
+        responses={
+            200: serializers.info_response,
+            400: serializers.error_response,
+            401: serializers.error_response,
+            403: serializers.error_response
+        },
+        operation_description="Accept a company. Only superuser can accept companies."
+    )
+    def patch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
+        """
+        Accept a company.
+        
+        Args:
+            request: HTTP request object
+            *args: Additional positional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Response: Success message if company accepted successfully
+            
+        Raises:
+            Response: 403 error if user lacks permission
+        """
+        if not request.user.is_superuser:
+            return Response(
+                {'error': 'You are not allowed to accept companies'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        company = self.get_object().company
+        company.is_active = True
+        company.save()
+        return Response(
+            {'message': 'Company accepted'},
+            status=status.HTTP_200_OK
+        )

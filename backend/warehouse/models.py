@@ -13,7 +13,7 @@ class Warehouse(models.Model):
     name = models.CharField(max_length=20, choices=NAME_CHOICES)
 
     def __str__(self):
-        return f'Warehouse: {self.name} - {self.name}'
+        return f'Warehouse: {self.name} - {self.company.name}'
 
     class Meta:
         db_table = 'warehouse'

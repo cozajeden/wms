@@ -4,9 +4,6 @@ on:
     push:
         branches:
         - backend
-    pull_request:
-        branches:
-        - main
 
 jobs:
     backend-tests:
@@ -58,7 +55,7 @@ jobs:
               
             - name: Stop containers
               run: docker compose -f docker-compose-test.yml down
-
+              
             - name: Configure Git
               run: |
                 git config --global user.name 'github-actions[bot]'

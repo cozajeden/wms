@@ -4,9 +4,6 @@ on:
     push:
         branches:
         - backend
-    pull_request:
-        branches:
-        - main
 
 jobs:
     backend-tests:
@@ -59,7 +56,6 @@ jobs:
               run: docker compose -f docker-compose-test.yml down
               
             - name: Merge to main
-              if: github.ref == 'refs/heads/backend' && github.event_name == 'push'
               run: |
                 git config --global user.name 'GitHub Actions'
                 git config --global user.email 'github-actions@github.com'

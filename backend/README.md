@@ -1,0 +1,1 @@
+[![Backend Tests](https://github.com/cozajeden/wms/actions/workflows/backend_test.yml/badge.svg)](https://github.com/cozajeden/wms/actions/workflows/backend_test.yml)

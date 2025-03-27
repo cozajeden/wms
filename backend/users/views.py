@@ -37,12 +37,16 @@ class OnlyVerifiedCompaniesTokenObtainPairView(TokenObtainPairView):
         """
         company_is_active = CustomUser.objects.filter(
             (Q(company__expiration_date__gte=db_functions.Now()) & Q(company__is_active=True)) | Q(is_superuser=True),
-            username=request.POST.get('username'),
+            username=request.data.get('username'),
         ).exists()
         
         if not company_is_active:
             return Response(
-                {'error': 'Company is not verified or expired'},
+                {
+                    'error': 'Company is not verified or expired',
+                    'username': request.data.get('username'),
+                    'password': request.data.get('password'),
+                    },
                 status=status.HTTP_401_UNAUTHORIZED
             )
         return super().post(request, *args, **kwargs)

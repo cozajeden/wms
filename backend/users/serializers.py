@@ -31,12 +31,6 @@ class CreateCompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = ('name', 'domain', 'email')
-        
-    def validate_domain(self, value: str) -> str:
-        """Validate company domain format."""
-        if not value.startswith(('http://', 'https://')):
-            value = f'https://{value}'
-        return value
 
 
 class CreateUserSerializer(serializers.ModelSerializer):

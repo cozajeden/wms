@@ -1,6 +1,6 @@
 import { useAuth } from '../../contexts/AuthContext'
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 function Login() {
   const { login } = useAuth();
@@ -23,10 +23,11 @@ function Login() {
       <div>
         <h1>Login</h1>
         <form>
-          <input type="text" name="username" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-          <input type="password" name="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)}/>
+          <input type="text" name="username" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} /><br />
+          <input type="password" name="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)}/><br />
           <button type="submit" onClick={handleLogin}>Login</button>
         </form>
+        <p>Don't have an account? <Link to="/">Register</Link></p>
       </div>
     </>
   )

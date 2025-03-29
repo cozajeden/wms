@@ -9,8 +9,8 @@ interface AuthContextType {
     login: (username: string, password: string) => Promise<void>;
     logout: () => void;
     init: () => void;
+    registerCompany: (username: string, password: string, email: string, name: string, domain: string) => Promise<void>;
 }
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const api = axios.create({
@@ -22,7 +22,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
     const [accessToken, setAccessToken] = useState<string | null>(null);
     const [refreshToken, setRefreshToken] = useState<string | null>(null);
-    
+
     useEffect(() => {
         if (accessToken) {
             axios.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
@@ -79,8 +79,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         localStorage.removeItem('refreshToken');
     };
 
+    const registerCompany = async (username: string, password: string, email: string, name: string, domain: string) => {
+        try {
+            const response = await api.post('/users/company/create/', {
+                username,
+                password,
+                email,
+                name,
+                domain,
+            });
+            return response.data;
+        } catch (error) {
+            console.error('Register company failed:', error);
+            throw error;
+        }
+    };
+
     return (
-        <AuthContext.Provider value={{ username, isAuthenticated, accessToken, refreshToken, login, logout, init }}>
+        <AuthContext.Provider value={{ username, isAuthenticated, accessToken, refreshToken, login, logout, init, registerCompany }}>
             {children}
         </AuthContext.Provider>
     );

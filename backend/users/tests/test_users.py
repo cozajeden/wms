@@ -156,11 +156,8 @@ class TestTokensAndUsers(TestCase):
             Created Company instance
         """
         company = self.random_company()
-        response = self.client.post(API.create_company, company)
-        assert response.status_code == status.HTTP_201_CREATED
-        company = Company.objects.get(name=company['name'])
-        company.is_active = verified
-        company.save()
+        company['is_active'] = verified
+        company = Company.objects.create(**company)
         return company
 
     def test_cant_create_user_without_auth(self) -> None:

@@ -6,7 +6,9 @@ from django.utils import timezone
 from django.conf import settings
 from django.db import models
 from enum import StrEnum
-from typing import Any
+from typing import Any, List, Callable
+from django.contrib.auth.decorators import user_passes_test
+from django.utils.decorators import method_decorator
 
 
 class UserGroups(StrEnum):
@@ -91,7 +93,7 @@ class Company(models.Model):
         verbose_name="Contact Email",
         unique=True
     )
-    is_active = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expiration_date = models.DateField(default=default_expiration_date)
 

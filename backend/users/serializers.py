@@ -1,6 +1,7 @@
-from users.models import CustomUser, Company
+from users.models import CustomUser, Company, UserGroups
 from rest_framework import serializers
 from drf_yasg import openapi
+from django.db import transaction
 
 
 class CustomUserSerializer(serializers.ModelSerializer):
@@ -31,12 +32,6 @@ class CreateCompanySerializer(serializers.ModelSerializer):
     class Meta:
         model = Company
         fields = ('name', 'domain', 'email')
-        
-    def validate_domain(self, value: str) -> str:
-        """Validate company domain format."""
-        if not value.startswith(('http://', 'https://')):
-            value = f'https://{value}'
-        return value
 
 
 class CreateUserSerializer(serializers.ModelSerializer):
@@ -77,6 +72,7 @@ class AcceptCompanySerializer(serializers.ModelSerializer):
         fields = ('is_active',)
 
 
+
 # Swagger documentation response schemas
 error_response = openapi.Response(
     description='Error message.',
@@ -90,3 +86,5 @@ login_response = openapi.Response(
     description='Login response containing access and refresh tokens.',
     schema=LoginResponseSerializer
 )
+
+

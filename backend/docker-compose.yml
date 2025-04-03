@@ -20,7 +20,7 @@ services:
     depends_on:
       - backend-db
       - backend-init
-    command: ["gunicorn", "--bind", "0.0.0.0:8000", "wms.wsgi:application", "--workers", "2"]
+    command: ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 
   backend-init:
     <<: *backend-template

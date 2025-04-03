@@ -4,10 +4,11 @@ from rest_framework import generics, permissions, status
 from rest_framework.serializers import ModelSerializer
 from drf_yasg.utils import swagger_auto_schema
 from users.models import CustomUser, UserGroups
-from rest_framework.request import HttpRequest
+from rest_framework.request import Request
 from rest_framework.response import Response
 from . import serializers
 from typing import Any
+from django.db import transaction
 
 
 class OnlyVerifiedCompaniesTokenObtainPairView(TokenObtainPairView):
@@ -20,7 +21,7 @@ class OnlyVerifiedCompaniesTokenObtainPairView(TokenObtainPairView):
         },
         operation_description="Authenticate user and return tokens if company is verified and not expired."
     )
-    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Authenticate user and return tokens.
         
@@ -72,7 +73,7 @@ class CreateUserView(generics.GenericAPIView):
         },
         operation_description="Create a new user. Superuser can create users for any company. Admin can only create users for their company."
     )
-    def post(self, request: HttpRequest) -> Response:
+    def post(self, request: Request) -> Response:
         """
         Create a new user.
         
@@ -126,7 +127,7 @@ class DeleteUserView(generics.DestroyAPIView):
         },
         operation_description="Delete a user. Only superuser and admin can delete users."
     )
-    def delete(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
+    def delete(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Delete a user.
         
@@ -173,7 +174,7 @@ class UpdateUserView(generics.UpdateAPIView):
         },
         operation_description="Update a user's password. Only superuser, admin, and the user themselves can update passwords."
     )
-    def patch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Update a user's password.
         
@@ -205,11 +206,47 @@ class UpdateUserView(generics.UpdateAPIView):
         )
 
 
-class CreateCompanyView(generics.CreateAPIView):
-    """View for creating new companies."""
+class CreateCompanyView(generics.GenericAPIView):
+    """View for creating new companies with admin user."""
     
-    serializer_class = serializers.CreateCompanySerializer
     permission_classes = [permissions.AllowAny]
+
+    @swagger_auto_schema(
+        responses={
+            201: serializers.info_response,
+            400: serializers.error_response
+        },
+        operation_description="Create a new company and its admin user."
+    )
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        """
+        Create a new company and its admin user in an atomic transaction.
+        
+        Args:
+            request: HTTP request object containing company and user data
+            *args: Additional positional arguments
+            **kwargs: Additional keyword arguments
+            
+        Returns:
+            Response: Success message if company and user created successfully
+        """
+        with transaction.atomic():
+            company = serializers.CreateCompanySerializer(data=request.data)
+            company.is_valid(raise_exception=True)
+            company.save()
+            
+            data = request.data.copy()
+            data['company'] = company.instance.pk
+            data['role'] = UserGroups.ADMIN.value
+            
+            user = serializers.CreateUserSerializer(data=data)
+            user.is_valid(raise_exception=True)
+            user.save()
+        
+        return Response(
+            {'message': 'Company and admin user created successfully'},
+            status=status.HTTP_201_CREATED
+        )
 
 
 class AcceptCompanyView(generics.UpdateAPIView):
@@ -227,7 +264,7 @@ class AcceptCompanyView(generics.UpdateAPIView):
         },
         operation_description="Accept a company. Only superuser can accept companies."
     )
-    def patch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> Response:
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         """
         Accept a company.
         

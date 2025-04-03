@@ -91,7 +91,7 @@ class Company(models.Model):
         verbose_name="Contact Email",
         unique=True
     )
-    is_active = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     expiration_date = models.DateField(default=default_expiration_date)
 

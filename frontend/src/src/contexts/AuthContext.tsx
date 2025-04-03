@@ -81,7 +81,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const registerCompany = async (username: string, password: string, email: string, name: string, domain: string) => {
         try {
-            const response = await api.post('/users/company/create/', {
+            const response = await api.post('/api/users/company/create/', {
                 username,
                 password,
                 email,

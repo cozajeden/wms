@@ -145,18 +145,18 @@ class TestTokensAndUsers(TestCase):
         data = response.json()
         return {'Authorization': f'Bearer {data["access"]}'}, {'refresh': data['refresh']}
 
-    def create_company(self, verified: bool = False) -> Company:
+    def create_company(self, is_active: bool = False) -> Company:
         """
         Create a new company for testing.
         
         Args:
-            verified: Whether the company should be marked as verified
+            is_active: Whether the company should be marked as active
             
         Returns:
             Created Company instance
         """
         company = self.random_company()
-        company['is_active'] = verified
+        company['is_active'] = is_active
         company = Company.objects.create(**company)
         return company
 
@@ -199,7 +199,7 @@ class TestTokensAndUsers(TestCase):
             - Works for both verified and unverified companies
         """
         headers, _ = self.login(self.superuser)
-        for company in [self.create_company(), self.create_company(verified=True)]:
+        for company in [self.create_company(), self.create_company(is_active=True)]:
             user = self.random_user()
             user['company'] = company.id
             response = self.client.post(API.create_user, user, headers=headers)

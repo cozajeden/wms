@@ -3,7 +3,8 @@ from django.db.models import Q, functions as db_functions
 from rest_framework import generics, permissions, status
 from rest_framework.serializers import ModelSerializer
 from drf_yasg.utils import swagger_auto_schema
-from users.models import CustomUser, UserGroups
+from .models import CustomUser, UserGroups
+from .permissions import IsCompanyAdmin, IsCompanyMember
 from rest_framework.request import Request
 from rest_framework.response import Response
 from . import serializers
@@ -57,6 +58,7 @@ class CreateUserView(generics.GenericAPIView):
     """View for creating new users with role-based permissions."""
     
     serializer_class = serializers.CustomUserSerializer
+    permission_classes = [IsCompanyAdmin]
 
     def get_serializer_class(self) -> type[ModelSerializer]:
         """Get appropriate serializer based on user role."""
@@ -89,11 +91,6 @@ class CreateUserView(generics.GenericAPIView):
         """
         if request.user.is_superuser:
             serializer = serializers.CreateUserSerializer(data=request.data)
-        elif self.request.user.role != UserGroups.ADMIN.value:
-            return Response(
-                {'error': 'Only admin can create users'},
-                status=status.HTTP_403_FORBIDDEN
-            )
         else:
             data = request.data.copy()
             data['company'] = request.user.company_id
@@ -118,6 +115,7 @@ class DeleteUserView(generics.DestroyAPIView):
     
     queryset = CustomUser.objects.all()
     serializer_class = serializers.CustomUserSerializer
+    permission_classes = [IsCompanyAdmin, IsCompanyMember]
 
     @swagger_auto_schema(
         responses={
@@ -143,14 +141,6 @@ class DeleteUserView(generics.DestroyAPIView):
             Response: 403 error if user lacks permission
         """
         user = self.get_object()
-        if not request.user.is_superuser and not (
-            user.company_id == request.user.company_id and 
-            request.user.role == UserGroups.ADMIN.value
-        ):
-            return Response(
-                {'error': 'You are not allowed to delete this user'},
-                status=status.HTTP_403_FORBIDDEN
-            )
         user.delete()
         return Response(
             {'message': 'User deleted'},
@@ -164,6 +154,7 @@ class UpdateUserView(generics.UpdateAPIView):
     queryset = CustomUser.objects.all()
     serializer_class = serializers.UpdateUserPasswordSerializer
     http_method_names = ['patch']
+    permission_classes = [IsCompanyAdmin, IsCompanyMember]
 
     @swagger_auto_schema(
         responses={
@@ -190,14 +181,6 @@ class UpdateUserView(generics.UpdateAPIView):
             Response: 403 error if user lacks permission
         """
         user = self.get_object()
-        if not request.user.is_superuser and not (
-            user.company_id == request.user.company_id and 
-            request.user.role == UserGroups.ADMIN.value
-        ) and user.id != request.user.id:
-            return Response(
-                {'error': 'You are not allowed to update this user\'s password'},
-                status=status.HTTP_403_FORBIDDEN
-            )
         user.set_password(request.data.get('password'))
         user.save()
         return Response(
